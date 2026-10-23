@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "status": "configured",
+  "model_id": "milk-tower-rule-based-scoring",
+  "version": "1.0.0",
+  "approach": "rule-based",
+  "license": "MIT",
+  "data_source": "synthetic",
+  "features": [
+    "bki_has_delays",
+    "bki_max_delay_days",
+    "debt_burden_ratio",
+    "revenue_trend_6m",
+    "net_profit_avg",
+    "tax_arrears",
+    "egrul_status",
+    "monthly_revenue_avg",
+    "requested_amount"
+  ],
+  "artifacts": [],
+  "metrics": {
+    "accuracy": "N/A",
+    "note": "Deterministic rule-based system, no ML metrics. Score is 0-1000."
+  },
+  "limitations": [
+    "Rule-based approach only, no trained model",
+    "Requires manual tuning of thresholds",
+    "Synthetic data only for demo purposes"
+  ],
+  "cpu_supported": true,
+  "budget": {
+    "cpu_threads": 2,
+    "memory_mib": 3072
+  }
+}

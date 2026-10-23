@@ -1,0 +1,69 @@
+{
+  "companies": [
+    {
+      "inn": "7701234567",
+      "name": "ООО «Ромашка»",
+      "monthly_revenue_avg": 4500000,
+      "revenue_trend_6m": 0.12,
+      "net_profit_avg": 620000,
+      "debt_burden_ratio": 0.22,
+      "bki_has_delays": false,
+      "bki_max_delay_days": 0,
+      "bki_credit_history_months": 48,
+      "egrul_status": "ACTIVE",
+      "tax_arrears": false
+    },
+    {
+      "inn": "7702345678",
+      "name": "ИП Петров Пётр Петрович",
+      "monthly_revenue_avg": 1200000,
+      "revenue_trend_6m": 0.03,
+      "net_profit_avg": 180000,
+      "debt_burden_ratio": 0.48,
+      "bki_has_delays": false,
+      "bki_max_delay_days": 0,
+      "bki_credit_history_months": 24,
+      "egrul_status": "ACTIVE",
+      "tax_arrears": false
+    },
+    {
+      "inn": "7703456789",
+      "name": "ООО «СтройМастер»",
+      "monthly_revenue_avg": 8000000,
+      "revenue_trend_6m": -0.05,
+      "net_profit_avg": 350000,
+      "debt_burden_ratio": 0.65,
+      "bki_has_delays": true,
+      "bki_max_delay_days": 45,
+      "bki_credit_history_months": 72,
+      "egrul_status": "ACTIVE",
+      "tax_arrears": false
+    },
+    {
+      "inn": "7704567890",
+      "name": "ООО «НовТех»",
+      "monthly_revenue_avg": 900000,
+      "revenue_trend_6m": 0.35,
+      "net_profit_avg": 150000,
+      "debt_burden_ratio": 0.15,
+      "bki_has_delays": false,
+      "bki_max_delay_days": 0,
+      "bki_credit_history_months": 12,
+      "egrul_status": "ACTIVE",
+      "tax_arrears": false
+    },
+    {
+      "inn": "7705678901",
+      "name": "ООО «Закат»",
+      "monthly_revenue_avg": 600000,
+      "revenue_trend_6m": -0.30,
+      "net_profit_avg": -50000,
+      "debt_burden_ratio": 0.85,
+      "bki_has_delays": true,
+      "bki_max_delay_days": 120,
+      "bki_credit_history_months": 18,
+      "egrul_status": "ACTIVE",
+      "tax_arrears": true
+    }
+  ]
+}

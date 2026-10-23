@@ -1,0 +1,18 @@
+# Optional NVIDIA integration. Requires the ML owner's Dockerfile.gpu.
+# Apply after compose.yaml and compose.integration.yaml; CPU remains the default.
+services:
+  ml:
+    image: ${ML_GPU_IMAGE:-milk-tower-ml-gpu:local}
+    build:
+      dockerfile: Dockerfile.gpu
+    environment:
+      ML_DEVICE: cuda
+      CUDA_VISIBLE_DEVICES: "0"
+    deploy:
+      resources:
+        reservations:
+          memory: 512m
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

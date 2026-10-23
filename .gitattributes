@@ -1,0 +1,8 @@
+* text=auto eol=lf
+*.pdf binary
+*.ttf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+# Keep the upstream font license byte-for-byte.
+frontend/public/fonts/OFL.txt -whitespace

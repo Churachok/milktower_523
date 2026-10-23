@@ -1,0 +1,14 @@
+# Only source files and build configuration belong in the build context.
+**
+!Dockerfile
+!.dockerignore
+!nginx.conf
+!nginx.mock.conf
+!nginx.http.conf
+!package.json
+!package-lock.json
+!index.html
+!src/
+!src/**
+!public/
+!public/**

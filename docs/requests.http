@@ -1,0 +1,104 @@
+# Proposed integration contract; requires the team's backend and authenticated session.
+# The Docker demo has no API. Select client/employee sessions on the backend as required.
+@baseUrl = http://localhost:8080/api/v1
+@applicationId = PT-2026-0047
+@documentId = replace-with-upload-response-id
+
+### Read server-authenticated role
+GET {{baseUrl}}/session
+
+### List applications visible to current server-authenticated role
+GET {{baseUrl}}/applications
+
+### Create a draft with selected calculator terms (estimate metadata is optional)
+POST {{baseUrl}}/applications
+Content-Type: application/json
+
+{"productId":"working","amount":2400000,"term":18}
+
+### Complete a draft with synthetic client data
+PATCH {{baseUrl}}/applications/{{applicationId}}
+Content-Type: application/json
+
+{"amount":2400000,"term":18,"purpose":"Закупка сырья","company":{"name":"ООО «Мануфактура»","inn":"5408123456","industry":"Производство и торговля","contact":"Александр Волков","email":"alex@manufactura.example","phone":"+7 913 000-12-34"},"finances":{"revenue":12000000,"expenses":7000000,"debt":0,"years":3},"consent":true}
+
+### Upload synthetic statement (REST Client resolves the file relative to this document)
+POST {{baseUrl}}/applications/{{applicationId}}/documents
+Content-Type: multipart/form-data; boundary=MilkTowerBoundary
+
+--MilkTowerBoundary
+Content-Disposition: form-data; name="kind"
+
+statement
+--MilkTowerBoundary
+Content-Disposition: form-data; name="file"; filename="statement.pdf"
+Content-Type: application/pdf
+
+< ./fixtures/statement.pdf
+--MilkTowerBoundary--
+
+### Upload synthetic financial report
+POST {{baseUrl}}/applications/{{applicationId}}/documents
+Content-Type: multipart/form-data; boundary=MilkTowerBoundary
+
+--MilkTowerBoundary
+Content-Disposition: form-data; name="kind"
+
+report
+--MilkTowerBoundary
+Content-Disposition: form-data; name="file"; filename="financial-report.pdf"
+Content-Type: application/pdf
+
+< ./fixtures/financial-report.pdf
+--MilkTowerBoundary--
+
+### Submit a complete draft
+POST {{baseUrl}}/applications/{{applicationId}}/actions
+Content-Type: application/json
+
+{"action":"submitted"}
+
+### Bank moves checked application to manual review
+POST {{baseUrl}}/applications/{{applicationId}}/actions
+Content-Type: application/json
+
+{"action":"manual_review"}
+
+### Request additional information
+POST {{baseUrl}}/applications/{{applicationId}}/actions
+Content-Type: application/json
+
+{"action":"needs_info","reason":"Добавьте расшифровку дебиторской задолженности"}
+
+### Client replies (after uploading additional documents if requested)
+POST {{baseUrl}}/applications/{{applicationId}}/actions
+Content-Type: application/json
+
+{"action":"submitted","reply":"Просроченная задолженность отсутствует"}
+
+### Offer conditions; requires manual_review status and employee session
+POST {{baseUrl}}/applications/{{applicationId}}/actions
+Content-Type: application/json
+
+{"action":"approved","amount":2000000,"term":24,"rate":20,"reason":"Предлагаем комфортную сумму"}
+
+### Alternative rejection example
+POST {{baseUrl}}/applications/{{applicationId}}/actions
+Content-Type: application/json
+
+{"action":"rejected","reason":"Текущая долговая нагрузка слишком высока"}
+
+### Client confirms modeled issue
+POST {{baseUrl}}/applications/{{applicationId}}/actions
+Content-Type: application/json
+
+{"action":"issued","accepted":true}
+
+### Logout (invalidate server session)
+DELETE {{baseUrl}}/session
+
+### Separate cleanup example: remove a document from a draft or needs_info application
+DELETE {{baseUrl}}/applications/{{applicationId}}/documents/{{documentId}}
+
+### Separate cleanup example: delete a draft (not an already submitted application)
+DELETE {{baseUrl}}/applications/{{applicationId}}

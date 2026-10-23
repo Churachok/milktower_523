@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 72" fill="none">
+  <title>Milk Tower — бутылка молока на купюрах</title>
+  <g stroke="#142333" stroke-width="2.4" stroke-linejoin="round">
+    <path d="m5 52 45-8 10 10-45 10z" fill="#d9e5f8"/>
+    <path d="m5 57 45-8 10 10-45 10z" fill="#fff"/>
+    <path d="m5 52 45-8 10 10-45 10z" fill="#eef3fc"/>
+    <path d="m13 53 32-6 7 6-32 7z" stroke="#5876a5" stroke-width="1.4"/>
+    <path d="m18 62 32-6m-32 11 32-6" stroke="#5876a5" stroke-width="1.4"/>
+    <path d="M25 9h15v10c0 4 8 8 8 15v17c0 4-2 6-6 6H23c-4 0-6-2-6-6V34c0-7 8-11 8-15V9Z" fill="#fff"/>
+    <path d="M25 17h15" stroke="#98aac4" stroke-width="1.5"/>
+    <path d="M18 35h29v14H18" fill="#2257df" stroke="#2257df"/>
+    <rect x="23" y="4" width="19" height="8" rx="2" fill="#2257df"/>
+    <path d="M28 7h9" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+  <path d="M32.5 37c-1.6 2.3-4 4.6-4 6.2a4 4 0 0 0 8 0c0-1.6-2.4-3.9-4-6.2Z" fill="#fff"/>
+</svg>

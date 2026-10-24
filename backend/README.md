@@ -36,3 +36,24 @@
 | Материалы | Актуализированные OpenAPI, HTTP-примеры и THIRD_PARTY_NOTICES |
 
 После добавления реализации общий запуск описан в [docs/docker.md](../docs/docker.md). Рабочие БД, uploads, локальные env и виртуальные окружения исключены из Git. Для воспроизведения жюри нужны миграции и синтетический seed в исходниках, а не копия рабочей базы.
+
+## Реализация backend (Дмитрий Богданов)
+
+Стек: Python 3.12, FastAPI, SQLAlchemy 2, Alembic, SQLite (`$DATA_DIR/app.db`), pytest, ruff, uv (`uv.lock`).
+
+Команды (из `backend/`):
+
+    uv sync
+    uv run pytest -q
+    uv run ruff check .
+    DATA_DIR=/tmp/mt-data uv run uvicorn app.main:app --port 8000
+
+Демо-вход (пароля нет, только синтетические пользователи):
+`GET /api/v1/demo/login/{volkov|ivanova|smirnova}?next=<адрес frontend>`.
+`volkov`, `ivanova` — клиенты, `smirnova` — сотрудник.
+
+Допущения:
+- `app/seed.py` — временная заглушка для тестов, финальные данные готовит Михаил.
+- Скоринг (`app/scoring.py`) — правила `rules-v1`, пороги и веса рабочие; ML пока не подключён.
+- Содержимое загруженных файлов не хранится, только метаданные.
+- Рекомендация скоринга не меняет статус; решение сотрудника — отдельное действие, пишется в `decisions` и `audit_log`.

@@ -6,6 +6,8 @@ from fastapi import APIRouter, Body, File, Form, Response, UploadFile
 from sqlalchemy import select
 
 from app.config import get_settings
+from app.credit import PRODUCTS, calculate_loan, terms_error
+from app.credit import to_number as _num
 from app.deps import CurrentUser, Db
 from app.errors import ApiError
 from app.models import Application, User, next_application_id, now_iso
@@ -14,7 +16,6 @@ from app.serializers import make_event, serialize
 
 router = APIRouter(prefix="/api/v1/applications")
 
-PRODUCTS = {"working", "equipment"}
 DOC_KINDS = {"statement", "report", "additional", "other"}
 SIGNATURES = {
     ".pdf": (b"%PDF",),
@@ -26,19 +27,6 @@ PATCH_FIELDS = {
     "productId", "amount", "term", "purpose",
     "company", "finances", "consent", "calculation",
 }
-
-
-def _num(value) -> float | None:
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, (int, float)):
-        return float(value)
-    if isinstance(value, str):
-        try:
-            return float(value.replace(",", "."))
-        except ValueError:
-            return None
-    return None
 
 
 def _require_client(user: User) -> None:
@@ -76,11 +64,9 @@ def create_application(db: Db, user: CurrentUser, body: Annotated[dict, Body()])
     if product not in PRODUCTS:
         raise _bad("Неизвестный кредитный продукт")
     amount, term = _num(body.get("amount")), _num(body.get("term"))
-    if amount is None or amount <= 0:
-        raise _bad("Укажите сумму кредита")
-    if term is None or term < 1 or not float(term).is_integer():
-        raise _bad("Укажите срок кредита в месяцах")
-    calc = body.get("calculation")
+    error = terms_error(product, amount, term)
+    if error:
+        raise _bad(error)
     now = now_iso()
     a = Application(
         id=next_application_id(db),
@@ -96,7 +82,7 @@ def create_application(db: Db, user: CurrentUser, body: Annotated[dict, Body()])
         documents=[],
         history=[make_event("Черновик создан", "Вы начали новую заявку.", user.name)],
         messages=[],
-        calculation=calc if isinstance(calc, dict) else None,
+        calculation=calculate_loan(product, amount, term),  # считает сервер
         created_at=now,
         updated_at=now,
     )
@@ -131,20 +117,18 @@ def update_draft(app_id: str, db: Db, user: CurrentUser, body: Annotated[dict, B
         if not isinstance(body["purpose"], str):
             raise _bad("Цель кредита должна быть текстом")
         a.purpose = body["purpose"]
-    for key, attr in (("company", "company"), ("finances", "finances")):
+    for key in ("company", "finances"):
         if key in body:
             if not isinstance(body[key], dict):
                 raise _bad(f"Поле {key} заполнено неверно")
-            setattr(a, attr, body[key])
+            setattr(a, key, body[key])
     if "consent" in body:
         if not isinstance(body["consent"], bool):
             raise _bad("Согласие должно быть да или нет")
         a.consent = body["consent"]
-    if "calculation" in body:
-        calc = body["calculation"]
-        if calc is not None and not isinstance(calc, dict):
-            raise _bad("Расчёт заполнен неверно")
-        a.calculation = calc
+    if {"productId", "amount", "term"} & set(body):
+        # расчёт всегда считает сервер; при неверных условиях — None
+        a.calculation = calculate_loan(a.product_id, a.amount, a.term)
     a.updated_at = now_iso()
     db.commit()
     return serialize(a)

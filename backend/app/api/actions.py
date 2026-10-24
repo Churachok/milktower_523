@@ -1,19 +1,22 @@
 import re
+import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Body
 from sqlalchemy import update
 
-from app.api.applications import _num
 from app.checks import run_checks
+from app.credit import PRODUCTS, terms_error, to_number
 from app.deps import CurrentUser, Db
 from app.errors import ApiError
-from app.models import Application, AuditLog, Decision, now_iso
+from app.models import Application, AuditLog, Check, Decision, now_iso
+from app.scoring import diverges
 from app.serializers import make_event, serialize
 from app.state_machine import STATUSES, required_role
 
 router = APIRouter(prefix="/api/v1/applications")
+EMAIL = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 
 def _bad(message: str) -> ApiError:
@@ -28,31 +31,41 @@ def _text(body: dict, key: str, message: str) -> str:
 
 
 def _submit_error(a: Application) -> str | None:
-    company = a.company or {}
-    if not str(company.get("name", "")).strip():
+    """Те же правила, что validateStep во frontend, плюс лимиты продукта."""
+    c = a.company or {}
+    if not str(c.get("name", "")).strip():
         return "Укажите название компании"
-    if not re.fullmatch(r"\d{10}|\d{12}", str(company.get("inn", ""))):
+    if not re.fullmatch(r"\d{10}|\d{12}", str(c.get("inn", ""))):
         return "ИНН должен содержать 10 или 12 цифр"
+    if not str(c.get("contact", "")).strip():
+        return "Укажите контактное лицо"
+    if not EMAIL.fullmatch(str(c.get("email", ""))):
+        return "Укажите корректную почту"
+    if len(re.sub(r"\D", "", str(c.get("phone", "")))) != 11:
+        return "Укажите телефон из 11 цифр"
+    error = terms_error(a.product_id, a.amount, a.term)
+    if error:
+        return error
     if not (a.purpose or "").strip():
-        return "Укажите цель кредита"
+        return "Расскажите, на что нужны средства"
     f = a.finances or {}
-    revenue, expenses = _num(f.get("revenue")), _num(f.get("expenses"))
-    debt, years = _num(f.get("debt")), _num(f.get("years"))
+    revenue, expenses = to_number(f.get("revenue")), to_number(f.get("expenses"))
+    debt, years = to_number(f.get("debt")), to_number(f.get("years"))
     if revenue is None or revenue <= 0:
-        return "Укажите выручку за 12 месяцев"
+        return "Выручка должна быть больше 0 ₽"
     if expenses is None or expenses < 0:
-        return "Укажите расходы за 12 месяцев"
+        return "Укажите расходы от 0 ₽"
     if debt is None or debt < 0:
-        return "Укажите остаток обязательств"
-    if years is None or years < 1 or not float(years).is_integer():
-        return "Укажите возраст бизнеса в годах"
-    if not a.consent:
-        return "Подтвердите согласие на обработку данных"
-    kinds = {d["kind"] for d in a.documents}
+        return "Укажите обязательства от 0 ₽"
+    if years is None or years < 1:
+        return "Укажите срок работы бизнеса от 1 года"
+    kinds = {d.get("kind") for d in a.documents}
     if "statement" not in kinds:
-        return "Добавьте выписку по счёту"
+        return "Добавьте выписку по расчётному счёту"
     if "report" not in kinds:
-        return "Добавьте финансовую отчётность"
+        return "Нужны выписка и финансовая отчётность"
+    if not a.consent:
+        return "Подтвердите согласие перед отправкой"
     return None
 
 
@@ -97,11 +110,13 @@ def apply_action(
             else "Укажите понятную клиенту причину отказа",
         )
     elif target == "approved":
-        amount, term = _num(body.get("amount")), _num(body.get("term"))
-        rate = _num(body.get("rate"))
+        p = PRODUCTS[a.product_id]
+        amount, term = to_number(body.get("amount")), to_number(body.get("term"))
+        rate = to_number(body.get("rate"))
         if (
-            amount is None or amount <= 0 or amount > a.amount
-            or term is None or term < 1 or not float(term).is_integer()
+            amount is None or amount < p["min"] or amount > min(a.amount, p["max"])
+            or term is None or not float(term).is_integer()
+            or not p["min_term"] <= term <= p["max_term"]
             or rate is None or rate <= 0 or rate > 100
         ):
             raise _bad("Проверьте сумму, срок и ставку предложения")
@@ -139,7 +154,7 @@ def apply_action(
             detail = "Дополнительные сведения переданы банку."
             a.messages = [
                 *a.messages,
-                {"id": make_event("", "", "")["id"], "text": reply,
+                {"id": str(uuid.uuid4()), "text": reply,
                  "actor": user.name, "at": now_iso()},
             ]
             a.request = None
@@ -148,7 +163,10 @@ def apply_action(
     elif target == "manual_review":
         title = "Заявка на рассмотрении"
         detail = "Демонстрационные проверки завершены. Решение принимает сотрудник."
-        a.checks = run_checks(a)
+        summary, items = run_checks(a)
+        a.checks = summary
+        for item in items:
+            db.add(Check(application_id=a.id, **item))
     elif target == "needs_info":
         title, detail = "Нужны дополнительные сведения", reason
         a.request = reason
@@ -166,15 +184,21 @@ def apply_action(
     a.history = [*a.history, make_event(title, detail, user.name)]
     a.updated_at = now_iso()
 
+    is_decision = target in ("needs_info", "approved", "rejected")
+    code = (a.checks or {}).get("recommendationCode")
+    audit_details = (
+        {"recommendation": code, "diverges": diverges(code, target)}
+        if is_decision else {}
+    )
     db.add(AuditLog(
         actor_user_id=user.id, action=target, application_id=a.id,
-        from_status=src, to_status=target,
+        from_status=src, to_status=target, details=audit_details,
     ))
-    if target in ("needs_info", "approved", "rejected"):
+    if is_decision:
         db.add(Decision(
             application_id=a.id, employee_id=user.id, decision=target,
             details={"reason": reason, "offer": offer},
-            scoring_recommendation=(a.checks or {}).get("recommendation"),
+            scoring_recommendation=code,
         ))
     db.commit()
     return serialize(a)

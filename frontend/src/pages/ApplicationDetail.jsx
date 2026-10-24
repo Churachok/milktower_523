@@ -71,6 +71,15 @@ export default function ApplicationDetail({
     setError("");
     setReason("");
     setAccepted(false);
+    if (value === "approve") {
+      const suggested = app.scoringResult?.approved_amount;
+      setOffer({
+        amount: Number.isFinite(suggested) && suggested >= productOf(app.productId).min && suggested <= app.amount
+          ? suggested : app.amount,
+        term: app.term,
+        rate: productOf(app.productId).rate,
+      });
+    }
     setModal(value);
   };
   const progress = STATUS[app.status].step;
@@ -248,6 +257,9 @@ export default function ApplicationDetail({
           </p>
         </Notice>
       )}
+      {error && !modal && (
+        <Notice tone="red"><p role="alert">{error}</p></Notice>
+      )}
       <div className="detail-layout">
         <div className="detail-main">
           <section className="card">
@@ -394,24 +406,26 @@ export default function ApplicationDetail({
                 <>
                   <h3>Результаты проверок</h3>
                   <Notice tone="amber">
-                    Демонстрационные результаты. Проверки ЕГРЮЛ, БКИ и
-                    ML-скоринг не выполняются. Реальные данные должны поступать
-                    от бэкенда.
+                    {app.checks?.source === "rule-based"
+                      ? "Баллы рассчитаны Python-сервисом по правилам Михаила. ЕГРЮЛ, БКИ и ФНС смоделированы; документы проверяются по метаданным. Это рекомендация, решение принимает сотрудник."
+                      : app.checks
+                        ? "Сохранённый синтетический пример, не результат Python-скоринга. Для расчёта новых заявок завершите проверки после отправки."
+                        : "Скоринг ещё не рассчитан. Завершите проверки, чтобы получить оценку по данным заявки."}
                   </Notice>
                   {app.checks ? (
                     <>
                       <div className="checks-list">
-                        {[
+                        {(app.checks.externalChecks || [
                           "Регистрация компании · ЕГРЮЛ",
                           "Кредитная история · БКИ",
                           "Комплектность документов",
-                        ].map((name) => (
-                          <div key={name}>
-                            <span className="check-circle">
-                              <Icon name="check" size={14} />
+                        ].map((label) => ({ label, passed: true }))).map((check) => (
+                          <div key={check.label}>
+                            <span className={`check-circle ${check.passed ? "" : "amber-soft"}`}>
+                              <Icon name={check.passed ? "check" : "info"} size={14} />
                             </span>
-                            <strong>{name}</strong>
-                            <span className="soft-label">Демо: пройдено</span>
+                            <strong>{check.label}</strong>
+                            <span className="soft-label">{check.passed ? "Демо: пройдено" : "Демо: есть замечания"}</span>
                           </div>
                         ))}
                       </div>
@@ -425,7 +439,7 @@ export default function ApplicationDetail({
                             <i style={{ width: `${app.checks.score / 10}%` }} />
                           </div>
                           <small>
-                            Синтетический балл · рейтинг {app.checks.rating}
+                            {app.checks.source === "rule-based" ? "Расчёт по правилам" : "Синтетический образец"} · рейтинг {app.checks.rating}
                           </small>
                         </div>
                         <div>
@@ -437,6 +451,26 @@ export default function ApplicationDetail({
                           </p>
                         </div>
                       </div>
+                      {app.scoringResult && (
+                        <>
+                          <Notice>
+                            <strong>Рекомендация кредитной логики</strong>
+                            <p>{app.scoringResult.message}</p>
+                            {app.scoringResult.approved_amount != null && (
+                              <p>Рекомендуемая сумма: {money(app.scoringResult.approved_amount)}. Условия подтверждает сотрудник.</p>
+                            )}
+                          </Notice>
+                          <details className="attach-details">
+                            <summary>Признаки и допущения расчёта</summary>
+                            <dl className="summary-list roomy">
+                              <div><dt>Средняя выручка в месяц</dt><dd>{money(app.scoringResult.features.monthly_revenue_avg)}</dd></div>
+                              <div><dt>Средняя прибыль в месяц</dt><dd>{money(app.scoringResult.features.net_profit_avg)}</dd></div>
+                              <div><dt>Расчётная долговая нагрузка</dt><dd>{(app.scoringResult.features.debt_burden_ratio * 100).toFixed(1)}%</dd></div>
+                            </dl>
+                            {app.scoringResult.assumptions.map((text) => <p key={text}>{text}</p>)}
+                          </details>
+                        </>
+                      )}
                       <h3>Факторы рекомендации</h3>
                       <div className="factors">
                         {app.checks.factors.map((f) => (
@@ -472,15 +506,14 @@ export default function ApplicationDetail({
               {app.status === "submitted" && (
                 <>
                   <p>
-                    Передайте заявку на рассмотрение после демонстрационной
-                    проверки.
+                    Рассчитайте скоринг и передайте заявку на рассмотрение.
                   </p>
                   <Button
                     icon="shield"
                     loading={busy}
                     onClick={() => action("manual_review")}
                   >
-                    Завершить демо-проверки
+                    Завершить проверки и скоринг
                   </Button>
                 </>
               )}

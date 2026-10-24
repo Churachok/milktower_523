@@ -10,6 +10,7 @@
 node scripts/check-repository.mjs
 npm ci --prefix frontend
 npm test --prefix frontend
+PYTHONPATH=ml python3 -m unittest discover -s ml/tests -v
 npm run build --prefix frontend
 docker compose config --quiet
 docker compose -f compose.yaml -f compose.integration.yaml config --quiet
@@ -29,7 +30,7 @@ node scripts/smoke.mjs
 | [Backend](../backend/README.md) | Дмитрий | Код, Dockerfile, runtime/lock-файл, сессии, синтетические учётные записи и seed, хранение, миграции, актуальный OpenAPI, тесты и лицензии |
 | [ML](../ml/README.md) | Михаил | Код/правила, CPU Dockerfile, модель и манифест, источник/лицензия/хеш артефактов, признаки, метрики, ограничения и тесты |
 
-При добавлении сервисов пройти общий запуск `docker compose --parallel 1 -f compose.yaml -f compose.integration.yaml up --build -d --wait --wait-timeout 180` и сквозной сценарий с реальными серверными сессиями. GPU — дополнительный вариант; базовая версия должна воспроизводиться на CPU. Проверить пиковую память, автономность запуска и сохранение данных. Обновить таблицу готовности в README, архитектуру, THIRD_PARTY_NOTICES и результаты проверки. До этого команда предоставляет жюри автономное frontend-демо и явно указывает состояние остальных компонентов.
+После добавления backend пройти общий запуск `docker compose --parallel 1 -f compose.yaml -f compose.integration.yaml up --build -d --wait --wait-timeout 180` и сквозной сценарий с серверными сессиями. GPU — дополнительный вариант; базовая версия должна воспроизводиться на CPU. Проверить пиковую память, автономность запуска и сохранение данных. Обновить таблицу готовности в README, архитектуру, THIRD_PARTY_NOTICES и результаты проверки. Текущий комплект — frontend + локальный rule-based ML с браузерным хранением; отсутствие полноценного backend указано явно.
 
 ## Фиксация и выгрузка
 

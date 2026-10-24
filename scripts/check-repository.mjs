@@ -41,6 +41,8 @@ for (const path of files) {
 for (const path of [
   "README.md", "THIRD_PARTY_NOTICES", "compose.yaml", "compose.integration.yaml", "compose.gpu.yaml",
   "frontend/package-lock.json", "frontend/Dockerfile", "backend/README.md", "ml/README.md",
+  "frontend/vite.config.js", "frontend/src/services/scoring.js", "ml/Dockerfile",
+  "ml/server.py", "ml/demo.py", "ml/tests/test_scoring.py", "docs/scoring-openapi.json",
   "docs/architecture.md", "docs/openapi.json", "docs/requests.http", "docs/test-scenarios.md",
   "docs/fixtures/statement.pdf", "docs/fixtures/financial-report.pdf",
 ]) assert.ok(files.includes(path) && existsSync(resolve(root, path)), `${path} is missing from the submission`);
@@ -63,10 +65,8 @@ for (const path of files.filter((name) => name.endsWith(".md"))) {
   }
 }
 
-const spec = JSON.parse(readFileSync(resolve(root, "docs/openapi.json"), "utf8"));
-assert.equal(spec.openapi, "3.1.0");
-function verifyReferences(value) {
-  if (Array.isArray(value)) return value.forEach(verifyReferences);
+function verifyReferences(value, spec) {
+  if (Array.isArray(value)) return value.forEach((item) => verifyReferences(item, spec));
   if (!value || typeof value !== "object") return;
   if (value.$ref) {
     assert.ok(value.$ref.startsWith("#/"), `Unsupported API reference ${value.$ref}`);
@@ -76,7 +76,11 @@ function verifyReferences(value) {
     }
     assert.notEqual(target, undefined, `Missing API reference ${value.$ref}`);
   }
-  Object.values(value).forEach(verifyReferences);
+  Object.values(value).forEach((item) => verifyReferences(item, spec));
 }
-verifyReferences(spec);
+for (const path of ["docs/openapi.json", "docs/scoring-openapi.json"]) {
+  const spec = JSON.parse(readFileSync(resolve(root, path), "utf8"));
+  assert.equal(spec.openapi, "3.1.0");
+  verifyReferences(spec, spec);
+}
 console.log(`Repository check passed: ${files.length} allowed files, ${linkCount} local links, ignore rules and OpenAPI references.`);

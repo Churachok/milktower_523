@@ -6,7 +6,7 @@
 
 `docker info` и `docker compose version` должны выполняться успешно. Если `/var/run/docker.sock` отсутствует, запустить Docker Desktop или службу Docker по правилам ОС. Node.js и Python на хосте для Docker-запуска не нужны. GPU не требуется для CPU-режима.
 
-## 1. Доступное frontend-демо
+## 1. Frontend + ML без полноценного backend
 
 Из корня:
 
@@ -14,13 +14,13 @@
 docker compose up --build -d --wait --wait-timeout 60
 ```
 
-Открыть [http://localhost:8080](http://localhost:8080). `compose.yaml` собирает target `demo`: Node.js 22 устанавливает npm-пакеты по lock-файлу и собирает `VITE_API_MODE=mock`; финальный Nginx-образ содержит только готовые файлы. `/api/` возвращает JSON с HTTP 503. Healthcheck проверяет `/index.html`.
+Открыть [http://localhost:8080](http://localhost:8080). `compose.yaml` собирает frontend target `demo` и ML из `ml/Dockerfile`. Node.js 22 устанавливает npm-пакеты по lock-файлу и собирает `VITE_API_MODE=mock`; финальный Nginx-образ содержит готовые файлы. Заявки хранятся в браузере. `/ml-api/` проксируется в Python `ml:8001`, `/api/` будущего backend возвращает JSON 503. Frontend стартует после healthcheck ML. Python 3.12.12 запускает правила и stdlib HTTP-сервис без pip-пакетов или весов.
 
 Публикация только на localhost сохраняет браузерный secure context. При необходимости скопировать `.env.example` в `.env` и изменить `APP_PORT`. В `.env` для демонстрации нет обязательных настроек.
 
 ## 2. Подготовленная CPU-интеграция команды
 
-В конфигурации уже согласованы имена сервисов, порты, тома и порядок готовности. До запуска Дмитрий добавляет `backend/Dockerfile` и сервер, Михаил — `ml/Dockerfile` и inference; вместе они согласуют ML API, сессии, синтетический seed и серверные проверки. Сейчас этих реализаций нет, поэтому общий стек ещё не запускается.
+В конфигурации согласованы имена сервисов, порты, тома и порядок готовности. ML-сервис уже работает в базовом демо. Для полноценной интеграции Дмитрий добавляет `backend/Dockerfile` и сервер; команда согласует вызов ML из backend, сессии, seed и серверные проверки. Пока backend отсутствует, интеграционный стек не запускается; для текущего прототипа нужен базовый `compose.yaml`.
 
 ```bash
 docker compose --parallel 1 -f compose.yaml -f compose.integration.yaml up --build -d --wait --wait-timeout 180
@@ -32,7 +32,7 @@ docker compose --parallel 1 -f compose.yaml -f compose.integration.yaml up --bui
 | backend | `backend:8000` | Build context `./backend`, `ML_BASE_URL=http://ml:8001`, `DATA_DIR=/data`, том `backend-data` |
 | ml | `ml:8001` | Build context `./ml`, `ML_DEVICE=cpu`, BLAS/OpenMP по 2 потока, том `ml-cache` в `/cache` |
 
-Порты backend и ML наружу не опубликованы. Оба образа должны содержать `curl` и предоставлять `GET /healthz` без авторизации. HTTP 200 означает готовность хранилища / загруженной модели. Compose ожидает ML, затем backend, затем frontend. Таймаут готовности не включает время сборки.
+Порты backend и ML наружу не опубликованы. Backend должен содержать `curl` для healthcheck; ML проверяется через Python `urllib`. Оба предоставляют `GET /healthz`; у текущего ML готовность не требует загрузки весов. Compose ожидает ML, затем backend, затем frontend. Таймаут готовности не включает время сборки.
 
 Образы запускают непривилегированный процесс, слушают `0.0.0.0`, заранее создают `/data` или `/cache` с нужными правами. Файловая система read-only; запись доступна в соответствующий том и `/tmp`. Исполнение из `/tmp` отключено. Runtime, которому нужен JIT или дополнительные writable-каталоги, владелец сервиса отдельно проверяет и согласует с этими настройками.
 
@@ -59,6 +59,8 @@ docker compose --parallel 1 -f compose.yaml -f compose.integration.yaml -f compo
 | Режим / сервис | Лимит CPU | Лимит ОЗУ |
 |---|---|---|
 | Отдельное демо frontend | 1 | 128 МиБ |
+| Демо ML | 0,5 | 128 МиБ |
+| Демо: сумма | 1,5 | 256 МиБ |
 | Интеграция: frontend | 0,5 | 128 МиБ |
 | Интеграция: backend | 1 | 1 ГиБ |
 | Интеграция: ML | 2 | 3 ГиБ |
@@ -77,7 +79,7 @@ docker compose -f compose.yaml -f compose.integration.yaml -f compose.gpu.yaml c
 node scripts/check-repository.mjs
 ```
 
-Последняя команда требует Node.js 22.12+. Против работающего **демо** выполнить `node scripts/smoke.mjs`, при другом порте передать URL аргументом. Скрипт проверяет HTML, JS/CSS, шрифты, графику, SPA fallback, cache headers, HTTP 404 для отсутствующего asset и JSON 503 для API. Для интеграции надо отдельно проверить серверные сессии, API и сквозной [сценарий](test-scenarios.md); ожидание JSON 503 относится только к демо.
+Последняя команда требует Node.js 22.12+. Против работающего **демо** выполнить `node scripts/smoke.mjs`, при другом порте передать URL аргументом. Скрипт проверяет HTML, JS/CSS, шрифты, графику, SPA fallback, cache headers, HTTP 404, JSON 503 для backend API, healthcheck и настоящий Python-скоринг через `/ml-api/score`. Для интеграции надо отдельно проверить серверные сессии, API и сквозной [сценарий](test-scenarios.md); ожидание JSON 503 относится только к демо.
 
 Для каждой команды управления интеграцией использовать те же `-f` и `--env-file`, что при запуске: `ps`, `logs --tail=100`, `exec -T frontend nginx -t`, `down`. Обычный `docker compose down` относится к базовому демо и не является командой полной остановки интеграционного состава.
 

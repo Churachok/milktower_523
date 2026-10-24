@@ -1,5 +1,6 @@
-// Frontend adapter. Demo data is synthetic; this module does not implement bank scoring.
+// Demo persistence stays in the browser; Python provides synthetic rule-based scoring.
 import { seedApplications, DEMO_CHECKS } from "../data/seed.js";
+import { scoreApplication } from "./scoring.js";
 import {
   assertTransition,
   productOf,
@@ -8,6 +9,7 @@ import {
 } from "../domain/application.js";
 const STORAGE_KEY = "potok.applications.v1";
 const MODE = import.meta.env?.VITE_API_MODE || "mock";
+const SCORING_MODE = !import.meta.env || import.meta.env.VITE_SCORING_MODE === "static" ? "static" : "http";
 const BASE = (import.meta.env?.VITE_API_BASE_URL || "/api/v1").replace(
   /\/$/,
   "",
@@ -107,6 +109,7 @@ const addEvent = (app, title, detail, actor) => ({
 });
 export const api = {
   mode: MODE,
+  scoringMode: SCORING_MODE,
   async logout() {
     if (MODE === "http") await http("/session", { method: "DELETE" });
   },
@@ -222,6 +225,13 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ action: next, ...payload }),
       });
+    let scoring;
+    if (next === "manual_review" && SCORING_MODE === "http") {
+      const app = readDemo().find((a) => a.id === id);
+      if (!app) throw new Error("Заявка не найдена");
+      assertTransition(app, next, role);
+      scoring = await scoreApplication(app);
+    }
     return update(id, (app) => {
       assertTransition(app, next, role);
       let changed = { ...app, status: next };
@@ -229,6 +239,9 @@ export const api = {
       let detail = "";
       const actor = role === "employee" ? "Елена Смирнова" : "Александр Волков";
       if (next === "submitted") {
+        // A clarification invalidates the previous assessment until rechecked.
+        changed.checks = null;
+        changed.scoringResult = null;
         title = "Заявка отправлена";
         detail =
           app.status === "needs_info"
@@ -251,9 +264,11 @@ export const api = {
       }
       if (next === "manual_review") {
         title = "Заявка на рассмотрении";
-        detail =
-          "Демонстрационные проверки завершены. Решение принимает сотрудник.";
-        changed.checks = structuredClone(DEMO_CHECKS);
+        detail = scoring
+          ? `Скоринг по правилам ${scoring.checks.modelVersion}: ${scoring.checks.score}/1000. Решение принимает сотрудник.`
+          : "Демонстрационные проверки завершены. Статический образец, не расчёт скоринга.";
+        changed.checks = scoring?.checks || structuredClone(DEMO_CHECKS);
+        changed.scoringResult = scoring || null;
       }
       if (next === "needs_info") {
         if (!payload.reason?.trim())

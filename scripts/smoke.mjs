@@ -41,4 +41,21 @@ const api = await request("/api/v1/applications", 503);
 assert.match(api.headers.get("content-type") || "", /application\/json/);
 assert.equal(typeof (await api.json()).message, "string");
 
-console.log("HTTP smoke check passed: application, assets, SPA fallback and API boundary.");
+const health = await request("/ml-api/healthz");
+assert.equal((await health.json()).status, "ok");
+const score = await fetch(new URL("/ml-api/score", base), {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  signal: AbortSignal.timeout(5000),
+  body: JSON.stringify({
+    company: { inn: "5408123456" }, productId: "working", amount: 2400000, term: 18,
+    finances: { revenue: 12000000, expenses: 7000000, debt: 0, years: 3 },
+    documents: [{ kind: "statement" }, { kind: "report" }],
+  }),
+});
+assert.equal(score.status, 200);
+const scored = await score.json();
+assert.equal(scored.checks.source, "rule-based");
+assert.ok(Number.isInteger(scored.checks.score) && scored.checks.score >= 0 && scored.checks.score <= 1000);
+assert.equal(scored.features.monthly_revenue_avg, 1000000);
+console.log("HTTP smoke check passed: SPA, assets, API boundary and real Python scoring through Nginx.");

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "status": "configured",
   "model_id": "milk-tower-rule-based-scoring",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "approach": "rule-based",
   "license": "MIT",
   "data_source": "synthetic",
@@ -15,7 +15,9 @@
     "tax_arrears",
     "egrul_status",
     "monthly_revenue_avg",
-    "requested_amount"
+    "requested_amount",
+    "bki_credit_history_months",
+    "documents_provided"
   ],
   "artifacts": [],
   "metrics": {

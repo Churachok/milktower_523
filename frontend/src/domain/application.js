@@ -173,8 +173,8 @@ export function validateStep(app, step) {
     }
     if (Number(app.finances.revenue) === 0)
       errors["finances.revenue"] = "Выручка должна быть больше 0 ₽";
-    if (!app.finances.years || Number(app.finances.years) < 1)
-      errors["finances.years"] = "Укажите срок работы бизнеса от 1 года";
+    if (!Number.isFinite(Number(app.finances.years)) || Number(app.finances.years) < 1 || Number(app.finances.years) > 100)
+      errors["finances.years"] = "Укажите срок работы бизнеса от 1 до 100 лет";
   }
   if (step === 3) {
     if (!app.documents.some((d) => d.kind === "statement"))

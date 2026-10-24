@@ -73,8 +73,11 @@ def calculate_score(company: dict, application: dict) -> dict:
     if application.get("documents_provided"):
         add("DOCS_PROVIDED", 10, "Предоставлены дополнительные документы")
 
-    # Ограничиваем балл снизу нулем
-    final_score_100 = max(score_100, 0)
+    # Шкала контракта строго 0–1000. Неактивная компания — стоп-фактор;
+    # положительные признаки не должны компенсировать отсутствие регистрации.
+    final_score_100 = min(100, max(score_100, 0))
+    if company.get("egrul_status") != "ACTIVE":
+        final_score_100 = 0
     
     # Переводим в шкалу 0-1000 для фронтенда
     score_1000 = final_score_100 * 10

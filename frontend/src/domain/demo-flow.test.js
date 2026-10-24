@@ -37,6 +37,7 @@ test("complete demo journey: draft → submit → clarify → reply → countero
   await api.transition(app.id, "submitted", "client", {
     reply: "Просроченной задолженности нет",
   });
+  assert.equal((await api.list()).find((a) => a.id === app.id).checks, null);
   await api.transition(app.id, "manual_review", "employee");
   await api.transition(app.id, "approved", "employee", {
     amount: 900000,

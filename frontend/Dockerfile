@@ -9,6 +9,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --include=dev --no-audit --no-fund
 
 COPY index.html ./
+COPY vite.config.js ./
 COPY src ./src
 COPY public ./public
 

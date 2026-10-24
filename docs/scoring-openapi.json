@@ -1,0 +1,79 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Milk Tower — working synthetic scoring API",
+    "version": "1.0.1",
+    "description": "Local stateless Python demo. Not the future bank backend. All registry/BKI data is synthetic. Recommendations never change application status."
+  },
+  "servers": [{ "url": "/ml-api", "description": "Nginx/Vite proxy" }, { "url": "http://127.0.0.1:8001" }],
+  "paths": {
+    "/healthz": {
+      "get": {
+        "summary": "Ready to calculate synthetic scores",
+        "responses": { "200": { "description": "Ready", "content": { "application/json": { "schema": { "type": "object", "required": ["status", "modelVersion"], "properties": { "status": { "const": "ok" }, "modelVersion": { "type": "string" } } } } } } }
+      }
+    },
+    "/score": {
+      "post": {
+        "summary": "Calculate risk and a separate suggested credit action",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ScoringInput" } } } },
+        "responses": {
+          "200": { "description": "Recommendation only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ScoringResult" } } } },
+          "413": { "description": "Missing/empty body or body over 64 KiB" },
+          "415": { "description": "Expected application/json" },
+          "422": { "description": "Invalid JSON or input; JSON object with message" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "NumericInput": { "oneOf": [{ "type": "number" }, { "type": "string", "description": "Numeric form value; parsed and validated by the service" }] },
+      "ScoringInput": {
+        "type": "object",
+        "required": ["company", "productId", "amount", "term", "finances", "documents"],
+        "properties": {
+          "company": { "type": "object", "required": ["inn"], "properties": { "inn": { "type": "string", "pattern": "^([0-9]{10}|[0-9]{12})$" } } },
+          "productId": { "enum": ["working", "equipment"] },
+          "amount": { "$ref": "#/components/schemas/NumericInput", "description": "RUB; working 100000–10000000, equipment 500000–15000000" },
+          "term": { "$ref": "#/components/schemas/NumericInput", "description": "Integer months; working 3–36, equipment 6–60" },
+          "finances": {
+            "type": "object", "required": ["revenue", "expenses", "debt", "years"],
+            "properties": {
+              "revenue": { "$ref": "#/components/schemas/NumericInput", "description": "Annual revenue, RUB, 1–1e15" },
+              "expenses": { "$ref": "#/components/schemas/NumericInput", "description": "Annual expenses, RUB, 0–1e15" },
+              "debt": { "$ref": "#/components/schemas/NumericInput", "description": "Outstanding debt, RUB, 0–1e15; not a monthly payment" },
+              "years": { "$ref": "#/components/schemas/NumericInput", "description": "Business age, 1–100 years" }
+            }
+          },
+          "documents": { "type": "array", "items": { "type": "object", "properties": { "kind": { "type": "string" } } } }
+        }
+      },
+      "ScoringResult": {
+        "type": "object",
+        "required": ["checks", "decision", "message", "approved_amount", "positive_factors", "negative_factors", "features", "assumptions"],
+        "properties": {
+          "decision": { "enum": ["APPROVED", "APPROVED_WITH_CONDITIONS", "MANUAL_REVIEW", "NEED_MORE_INFO", "REJECTED"] },
+          "message": { "type": "string" },
+          "approved_amount": { "type": ["number", "null"], "description": "Suggested amount, not an issued or confirmed offer; null without an approval suggestion" },
+          "positive_factors": { "type": "array", "items": { "type": "object" } },
+          "negative_factors": { "type": "array", "items": { "type": "object" } },
+          "checks": {
+            "type": "object", "required": ["score", "rating", "recommendation", "factors", "source", "modelVersion", "externalChecks"],
+            "properties": {
+              "score": { "type": "integer", "minimum": 0, "maximum": 1000 },
+              "rating": { "enum": ["A", "B", "C", "D", "E"] },
+              "recommendation": { "type": "string" },
+              "factors": { "type": "array", "items": { "type": "object", "required": ["code", "delta", "label", "positive"], "properties": { "code": { "type": "string" }, "delta": { "type": "number", "description": "Contribution before the final x10 scale conversion and clamp" }, "label": { "type": "string" }, "positive": { "type": "boolean" } } } },
+              "source": { "const": "rule-based" },
+              "modelVersion": { "type": "string" },
+              "externalChecks": { "type": "array", "items": { "type": "object", "required": ["label", "passed"], "properties": { "label": { "type": "string" }, "passed": { "type": "boolean" } } } }
+            }
+          },
+          "features": { "type": "object", "description": "Derived numerical and synthetic external features; see scoring-rules.md" },
+          "assumptions": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

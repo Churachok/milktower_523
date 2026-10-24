@@ -1,3 +1,2 @@
-fastapi==0.111.0
-uvicorn==0.30.1
-pydantic==2.7.1
+# Python 3.12.12 (Dockerfile). Scoring and the demo HTTP service use only stdlib.
+# No third-party Python packages or model downloads are required.

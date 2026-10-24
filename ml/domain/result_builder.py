@@ -7,22 +7,23 @@ def build_result_payload(score_result: dict, application: dict) -> dict:
     
     # 1. Определяем бизнес-решение на основе шкалы 0-1000
     decision = "REJECTED"
-    message = "К сожалению, по заявке принято отрицательное решение."
-    approved_amount = application.get("requested_amount", 0)
+    message = "Рекомендуется отказ. Сотруднику необходимо проверить факторы риска и объяснить причину клиенту."
+    approved_amount = None
 
     if score_1000 >= 750:
         decision = "APPROVED"
-        message = "Заявка одобрена. Вы можете перейти к оформлению документов."
+        approved_amount = application["requested_amount"]
+        message = "Рекомендуется одобрить исходную сумму. Предложение должен подтвердить сотрудник."
     elif score_1000 >= 550:
         decision = "APPROVED_WITH_CONDITIONS"
-        message = "Заявка одобрена с изменёнными условиями: сумма скорректирована."
-        approved_amount = int(approved_amount * 0.7) # Урезаем на 30%
+        message = "Рекомендуется предложение с уменьшением суммы на 30%. Условия должен подтвердить сотрудник."
+        approved_amount = int(application["requested_amount"] * 0.7)
     elif score_1000 >= 350:
         decision = "MANUAL_REVIEW"
-        message = "Заявка передана на ручное рассмотрение сотруднику банка."
+        message = "Рекомендуется ручной анализ факторов риска сотрудником банка."
     elif score_1000 >= 200:
         decision = "NEED_MORE_INFO"
-        message = "Для принятия решения нужны дополнительные сведения. Приложите документы."
+        message = "Рекомендуется запрос дополнительных сведений. Сотрудник определяет, какие документы нужны."
 
     # 2. Сортируем факторы для UI (топ-3 негативных и топ-2 позитивных)
     neg_factors = sorted(

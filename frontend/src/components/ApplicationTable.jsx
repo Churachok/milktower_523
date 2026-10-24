@@ -45,20 +45,22 @@ export default function ApplicationTable({
     navigate(`/applications/${a.id}${a.status === "draft" ? "/edit" : ""}`);
   return (
     <section className="card applications-card">
-      <div className="section-heading">
-        <div className="inline-title">
-          <h2>{role === "employee" ? "Очередь заявок" : "Мои заявки"}</h2>
-          <span className="count-label">{available.length}</span>
+      {compact && (
+        <div className="section-heading">
+          <div className="inline-title">
+            <h2>{role === "employee" ? "Очередь заявок" : "Мои заявки"}</h2>
+            <span className="count-label">{available.length}</span>
+          </div>
+          {compact && (
+            <button
+              className="text-button"
+              onClick={() => navigate("/applications")}
+            >
+              Все заявки <Icon name="arrow" size={16} />
+            </button>
+          )}
         </div>
-        {compact && (
-          <button
-            className="text-button"
-            onClick={() => navigate("/applications")}
-          >
-            Все заявки <Icon name="arrow" size={16} />
-          </button>
-        )}
-      </div>
+      )}
       <div className="table-toolbar">
         <div className="tabs" role="tablist" aria-label="Фильтр заявок">
           {filters.map((f) => (

@@ -1,64 +1,18 @@
 import React from "react";
-import { Button, Icon, PageHeading } from "../components/ui";
-import ApplicationTable from "../components/ApplicationTable";
+import { Badge, Button, Empty, Icon, PageHeading } from "../components/ui";
 import LoanCalculator from "../components/LoanCalculator";
-import { money, PRODUCTS, productOf } from "../domain/application";
-
-const percent = (value) => Number(value).toLocaleString("ru-RU");
-
-export function ProductCard({ product, onSelect, full = false }) {
-  return (
-    <article className={`product-card ${full ? "full-product" : ""}`}>
-      <div className="product-card-top">
-        <span className="product-type">{product.tag}</span>
-        <Icon name={product.icon} size={24} />
-      </div>
-      <h3>{product.name}</h3>
-      <p>{product.description}</p>
-      <div className="product-terms">
-        <div>
-          <strong>до {product.max / 1000000} млн ₽</strong>
-          <small>сумма</small>
-        </div>
-        <div>
-          <strong>от {percent(product.rate)}%</strong>
-          <small>годовых</small>
-        </div>
-        <div>
-          <strong>до {product.maxTerm} мес.</strong>
-          <small>срок</small>
-        </div>
-      </div>
-      {full && (
-        <ul className="feature-list">
-          <li>
-            <Icon name="check" size={16} />
-            Заявка и документы онлайн
-          </li>
-          <li>
-            <Icon name="check" size={16} />
-            Статус рассмотрения в кабинете
-          </li>
-          <li>
-            <Icon name="check" size={16} />
-            Условия после проверки заявки
-          </li>
-        </ul>
-      )}
-      <Button
-        variant={full ? "primary" : "secondary"}
-        onClick={() => onSelect(product.id)}
-      >
-        Рассчитать кредит
-      </Button>
-    </article>
-  );
-}
+import { money, productOf } from "../domain/application";
 
 export default function Overview({ applications, navigate }) {
-  const attention = applications.filter((app) =>
-    ["needs_info", "approved"].includes(app.status),
-  );
+  const attention = applications
+    .filter((app) => ["needs_info", "approved"].includes(app.status))
+    .sort(
+      (a, b) =>
+        Number(b.status === "needs_info") - Number(a.status === "needs_info"),
+    );
+  const recent = [...applications]
+    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+    .slice(0, 3);
   const pending = applications.filter((app) =>
     ["submitted", "manual_review", "needs_info"].includes(app.status),
   );
@@ -67,8 +21,8 @@ export default function Overview({ applications, navigate }) {
   return (
     <>
       <PageHeading
-        title="Кредиты и заявки"
-        description="ООО «Мануфактура» · ИНН 5408123456"
+        title="Личный кабинет"
+        description="Ваши заявки и следующий шаг по кредиту."
       >
         <Button icon="plus" onClick={() => navigate("/products")}>
           Новая заявка
@@ -80,10 +34,17 @@ export default function Overview({ applications, navigate }) {
           aria-labelledby="attention-title"
         >
           <div className="attention-heading">
-            <h2 id="attention-title">Требуют внимания</h2>
-            <span>{attention.length}</span>
+            <h2 id="attention-title">Следующий шаг</h2>
+            {attention.length > 1 && (
+              <button
+                className="text-button"
+                onClick={() => navigate("/applications")}
+              >
+                Ещё {attention.length - 1}
+              </button>
+            )}
           </div>
-          {attention.map((app) => (
+          {attention.slice(0, 1).map((app) => (
             <div
               className={`attention-row ${app.status === "needs_info" ? "attention-request" : "attention-offer"}`}
               key={app.id}
@@ -104,9 +65,6 @@ export default function Overview({ applications, navigate }) {
                   {app.id} · {productOf(app.productId).short}
                 </p>
               </div>
-              <strong className="attention-amount">
-                {money(app.offer?.amount || app.amount)}
-              </strong>
               <Button
                 variant={app.status === "needs_info" ? "primary" : "secondary"}
                 onClick={() => navigate(`/applications/${app.id}`)}
@@ -137,35 +95,53 @@ export default function Overview({ applications, navigate }) {
           В работе <strong>{pending.length}</strong>
         </span>
         <span>
-          Одобрено{" "}
-          <strong>
-            {money(
-              approved.reduce(
-                (sum, app) => sum + (app.offer?.amount || app.amount),
-                0,
-              ),
-            )}
-          </strong>
+          Предложения <strong>{approved.length}</strong>
         </span>
         <span>
           Черновики <strong>{drafts.length}</strong>
         </span>
       </div>
-      <ApplicationTable
-        applications={applications}
-        compact
-        role="client"
-        navigate={navigate}
-      />
-      <section className="credit-promo">
-        <div>
-          <h2>Кредит для бизнеса</h2>
-          <p>До 15 млн ₽ · от 17,5% годовых · до 5 лет</p>
+      <section
+        className="card recent-applications"
+        aria-labelledby="recent-title"
+      >
+        <div className="section-heading">
+          <h2 id="recent-title">Последние заявки</h2>
+          <button
+            className="text-button"
+            onClick={() => navigate("/applications")}
+          >
+            Все заявки <Icon name="arrow" size={16} />
+          </button>
         </div>
-        <Button variant="secondary" onClick={() => navigate("/products")}>
-          Рассчитать платёж
-          <Icon name="arrow" size={16} />
-        </Button>
+        {recent.map((app) => (
+          <button
+            className="recent-application"
+            key={app.id}
+            onClick={() =>
+              navigate(
+                `/applications/${app.id}${app.status === "draft" ? "/edit" : ""}`,
+              )
+            }
+          >
+            <span>
+              <strong>{productOf(app.productId).short}</strong>
+              <small>{app.id}</small>
+            </span>
+            <span className="recent-terms">
+              <strong>{money(app.amount)}</strong>
+              <small>{app.term} мес.</small>
+            </span>
+            <Badge status={app.status} />
+            <Icon name="chevron" size={17} />
+          </button>
+        ))}
+        {!recent.length && (
+          <Empty
+            title="Пока нет заявок"
+            text="Начните с расчёта суммы и срока кредита."
+          />
+        )}
       </section>
     </>
   );
@@ -176,24 +152,8 @@ export function Products({
   calculatorValue,
   setCalculatorValue,
   creating,
+  requiresLogin = false,
 }) {
-  function selectProduct(id) {
-    const product = productOf(id);
-    setCalculatorValue((value) => ({
-      productId: id,
-      amount: Math.max(
-        product.min,
-        Math.min(product.max, Number(value.amount) || product.min),
-      ),
-      term: Math.max(
-        product.minTerm,
-        Math.min(product.maxTerm, Number(value.term) || product.minTerm),
-      ),
-    }));
-    document
-      .getElementById("loan-calculator")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
   return (
     <>
       <PageHeading
@@ -205,34 +165,20 @@ export function Products({
         onChange={setCalculatorValue}
         onContinue={createApplication}
         busy={creating}
+        requiresLogin={requiresLogin}
       />
-      <div className="section-heading outside">
-        <h2>Условия продуктов</h2>
-      </div>
-      <div className="products-grid products-page">
-        {PRODUCTS.map((product) => (
-          <ProductCard
-            product={product}
-            key={product.id}
-            full
-            onSelect={selectProduct}
-          />
-        ))}
-      </div>
       <p className="legal-note">
         Демонстрационные условия. Итоговые сумма, ставка и срок определяются при
         рассмотрении заявки. Предложение не является публичной офертой.
       </p>
-      <section className="card product-help">
-        <Icon name="help" size={24} />
-        <div>
-          <h3>Какой кредит выбрать</h3>
-          <p>
-            Оборотный кредит — для закупок, оплаты поставок и текущих расходов.
-            Инвестиционный — для оборудования и расширения производства.
-          </p>
-        </div>
-      </section>
+      <details className="product-requirements">
+        <summary>Что понадобится для заявки</summary>
+        <p>
+          Сведения о компании, выручка и расходы за 12 месяцев, остаток долгов.
+          Из документов — выписка по счёту за 6 месяцев и финансовая отчётность.
+        </p>
+        <p>Все дальнейшие действия доступны в личном кабинете.</p>
+      </details>
     </>
   );
 }

@@ -11,6 +11,266 @@
 body {
   background: #fff;
 }
+/* Small text entrances; controls and live data stay still and usable. */
+@keyframes text-appear {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .home-label,
+  .home-intro > h1,
+  .home-intro > p,
+  .page-heading > div:first-child,
+  .process-list li > div,
+  .sign-in > h1,
+  .sign-in > p {
+    animation: text-appear 420ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+  .home-intro > h1 {
+    animation-duration: 480ms;
+    animation-delay: 40ms;
+  }
+  .home-intro > p,
+  .sign-in > p {
+    animation-delay: 100ms;
+  }
+  .process-list li > div {
+    animation-delay: 80ms;
+  }
+  .process-list li:nth-child(2) > div {
+    animation-delay: 140ms;
+  }
+  .process-list li:nth-child(3) > div {
+    animation-delay: 200ms;
+  }
+}
+/* Public pages share the cabinet's brand, without company data or work panels. */
+.public-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.public-header,
+.public-content,
+.public-footer {
+  width: min(1180px, calc(100% - 80px));
+  margin: 0 auto;
+}
+.public-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  min-height: 96px;
+  border-bottom: 1px solid var(--border);
+}
+.public-brand {
+  text-decoration: none;
+}
+.public-header nav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.public-header nav a {
+  text-decoration: none;
+  font-size: 14px;
+  color: #68707c;
+  padding: 12px 0;
+}
+.public-header nav a:hover,
+.public-header nav a[aria-current="page"] {
+  color: var(--blue);
+}
+.public-header > .button {
+  font-size: 13px;
+  white-space: nowrap;
+}
+.public-content {
+  flex: 1;
+  padding: 64px 0 72px;
+  outline: none;
+}
+.public-home {
+  display: flex;
+  align-items: center;
+  min-height: min(690px, calc(100vh - 180px));
+}
+.home-intro {
+  max-width: 820px;
+  padding: 32px 0 48px;
+}
+.home-label {
+  display: block;
+  color: #68707c;
+  font-size: 14px;
+  margin-bottom: 26px;
+}
+.home-intro h1 {
+  font-size: clamp(44px, 5.8vw, 76px);
+  line-height: 1.1;
+  letter-spacing: -3px;
+}
+.home-intro h1 span {
+  color: var(--blue);
+}
+.home-intro > p {
+  max-width: 490px;
+  margin-top: 28px;
+  color: #68707c;
+  font-size: 17px;
+  line-height: 1.7;
+}
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 26px;
+  margin-top: 36px;
+}
+.home-actions > .button {
+  min-height: 50px;
+  padding: 15px 22px;
+  font-size: 14px;
+}
+.home-actions > .text-button {
+  font-size: 14px;
+}
+.home-process-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 64px;
+  text-decoration: none;
+  font-size: 13px;
+  color: #68707c;
+}
+.home-process-link:hover {
+  color: var(--blue);
+}
+.public-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 25px 0;
+  border-top: 1px solid var(--border);
+  color: #767d87;
+  font-size: 11px;
+}
+.process-list {
+  list-style: none;
+  margin: 44px 0;
+  padding: 0;
+  max-width: 800px;
+}
+.process-list li {
+  display: flex;
+  gap: 32px;
+  padding: 28px 0;
+  border-bottom: 1px solid var(--border);
+}
+.process-list li:first-child {
+  padding-top: 0;
+}
+.process-list li > span {
+  font-size: 16px;
+  color: var(--blue);
+  padding-top: 4px;
+}
+.process-list h2 {
+  font-size: 22px;
+}
+.process-list p {
+  font-size: 15px;
+  color: #68707c;
+  margin-top: 10px;
+}
+.public-disclaimer {
+  margin-top: 24px;
+}
+.sign-in {
+  max-width: 480px;
+  margin: 8px auto;
+  padding: 36px;
+}
+.sign-in > .product-icon {
+  margin-bottom: 24px;
+}
+.sign-in h1 {
+  font-size: 30px;
+  letter-spacing: -0.8px;
+}
+.sign-in > p {
+  color: #68707c;
+  font-size: 14px;
+  margin-top: 12px;
+}
+.sign-in form {
+  margin-top: 28px;
+}
+.sign-in-roles {
+  border: 0;
+  margin: 0 0 24px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.sign-in-roles legend {
+  font-size: 13px;
+  margin-bottom: 12px;
+  color: #68707c;
+}
+.sign-in-roles label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.sign-in-roles .selected {
+  border-color: #aabfed;
+  background: #f7f9ff;
+}
+.sign-in-roles input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--blue);
+  flex-shrink: 0;
+}
+.sign-in-roles strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+}
+.sign-in-roles small {
+  display: block;
+  font-size: 12px;
+  margin-top: 5px;
+  color: #68707c;
+}
+.sign-in form > .button {
+  width: 100%;
+  margin-top: 8px;
+  justify-content: space-between;
+  font-size: 13px;
+}
+.sign-in > small {
+  display: block;
+  margin-top: 22px;
+  font-size: 12px;
+  line-height: 1.7;
+}
 h1,
 h2,
 h3 {
@@ -77,7 +337,7 @@ p {
   font-weight: 600;
 }
 .company-switch small {
-  font-size: 8px;
+  font-size: 11px;
   color: #787d85;
 }
 .company-avatar {
@@ -95,7 +355,7 @@ p {
 }
 .nav-item {
   border-radius: 7px;
-  font-size: 12px;
+  font-size: 14px;
   min-height: 45px;
   color: #555b65;
 }
@@ -147,7 +407,7 @@ p {
   color: #858c97;
 }
 .topbar {
-  height: 76px;
+  height: 72px;
   padding: 0 38px;
   border-color: #eff0f2;
 }
@@ -209,7 +469,7 @@ p {
 .button {
   min-height: 44px;
   padding: 13px 18px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 550;
   border-radius: 7px;
   box-shadow: none;
@@ -501,7 +761,7 @@ td {
   border-bottom-color: #eef0f3;
 }
 .application-link strong {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 550;
   color: #2a303a;
 }
@@ -1635,6 +1895,115 @@ select {
   }
 }
 /* Daily work comes before product promotion. */
+.recent-applications .section-heading {
+  border-bottom: 1px solid var(--border);
+}
+.recent-applications .section-heading h2 {
+  font-size: 17px;
+}
+.recent-application {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto 18px;
+  align-items: center;
+  gap: 28px;
+  width: 100%;
+  text-align: left;
+  padding: 22px 24px;
+  background: white;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink);
+}
+.recent-application:last-child {
+  border-bottom: 0;
+  border-radius: 0 0 10px 10px;
+}
+.recent-application:hover {
+  background: #fafbfe;
+}
+.recent-application strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+}
+.recent-application small {
+  display: block;
+  margin-top: 7px;
+  font-size: 12px;
+  color: #737b87;
+}
+.recent-terms {
+  text-align: right;
+}
+.recent-application .badge {
+  justify-self: end;
+}
+.recent-application > svg {
+  color: #858d99;
+}
+.account-profile {
+  max-width: 760px;
+  padding: 30px;
+}
+.account-person {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 28px;
+}
+.account-person h2 {
+  font-size: 22px;
+}
+.account-person p {
+  color: #68707c;
+  font-size: 13px;
+  margin-top: 5px;
+}
+.account-profile > .button {
+  margin-top: 24px;
+}
+.account-demo {
+  margin-top: 28px;
+  max-width: 760px;
+  color: #68707c;
+  font-size: 13px;
+}
+.account-demo summary,
+.product-requirements summary {
+  cursor: pointer;
+  font-size: 14px;
+  color: #505b6b;
+}
+.account-demo > p {
+  margin-top: 16px;
+}
+.account-demo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+.account-demo-actions .button {
+  font-size: 12px;
+}
+.calculator-description {
+  color: #68707c;
+  font-size: 14px;
+  margin: -8px 0 28px;
+}
+.product-requirements {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.product-requirements p {
+  max-width: 720px;
+  color: #68707c;
+  font-size: 13px;
+  margin-top: 16px;
+}
+.applications-card > .table-toolbar:first-child {
+  padding-top: 20px;
+}
 .overview-attention {
   margin: 0 0 23px;
   border: 1px solid #e5e8ed;
@@ -2051,6 +2420,13 @@ select {
   overflow-wrap: anywhere;
 }
 @media (max-width: 1100px) {
+  .applications-card .table-scroll table {
+    min-width: 560px;
+  }
+  .applications-card th:nth-child(4),
+  .applications-card td:nth-child(4) {
+    display: none;
+  }
   .attention-row {
     flex-wrap: wrap;
     gap: 12px;
@@ -2270,5 +2646,148 @@ select {
   }
   .comparison-comment p {
     font-size: 10px;
+  }
+}
+@media (max-width: 800px) {
+  .public-header,
+  .public-content,
+  .public-footer {
+    width: calc(100% - 40px);
+  }
+  .public-header {
+    flex-wrap: wrap;
+    gap: 18px;
+    padding: 20px 0 0;
+  }
+  .public-header nav {
+    order: 3;
+    width: 100%;
+    gap: 24px;
+  }
+  .public-header nav a {
+    font-size: 13px;
+    padding: 5px 0 18px;
+  }
+  .public-header .brand-caption {
+    display: none;
+  }
+  .public-content {
+    padding: 40px 0 50px;
+  }
+  .public-home {
+    min-height: calc(100svh - 240px);
+  }
+  .home-intro h1 {
+    letter-spacing: -1.8px;
+  }
+  .home-intro > p {
+    font-size: 15px;
+    max-width: 430px;
+  }
+  .home-actions {
+    gap: 22px;
+  }
+  .home-process-link {
+    margin-top: 44px;
+  }
+  .recent-application {
+    gap: 16px;
+  }
+}
+@media (max-width: 480px) {
+  .public-header .brand-wordmark {
+    font-size: 19px;
+  }
+  .public-header .brand .brand-mark {
+    width: 30px;
+    height: 36px;
+  }
+  .public-header > .button {
+    font-size: 12px;
+    min-height: 40px;
+    padding: 10px 12px;
+  }
+  .public-header nav {
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .public-header nav a {
+    font-size: 12px;
+  }
+  .home-intro {
+    padding: 14px 0;
+  }
+  .home-intro h1 {
+    font-size: 44px;
+  }
+  .home-label {
+    font-size: 13px;
+    margin-bottom: 22px;
+  }
+  .home-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .home-actions > .button {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .public-footer {
+    font-size: 10px;
+    gap: 10px;
+  }
+  .sign-in {
+    padding: 24px;
+    margin: 0;
+  }
+  .sign-in h1 {
+    font-size: 27px;
+  }
+  .sign-in-roles label {
+    padding: 14px 12px;
+  }
+  .sign-in-roles small {
+    line-height: 1.5;
+  }
+  .process-list li {
+    gap: 20px;
+  }
+  .process-list h2 {
+    font-size: 20px;
+  }
+  .process-list p {
+    font-size: 14px;
+  }
+  .recent-application {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 20px;
+    gap: 16px 12px;
+  }
+  .recent-application .badge {
+    justify-self: start;
+  }
+  .recent-application > svg {
+    justify-self: end;
+  }
+  .recent-applications .section-heading {
+    gap: 14px;
+    padding: 20px;
+  }
+  .recent-applications .section-heading h2 {
+    font-size: 15px;
+  }
+  .account-profile {
+    padding: 22px;
+  }
+  .account-person {
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .account-person h2 {
+    font-size: 19px;
+  }
+  .account-demo-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

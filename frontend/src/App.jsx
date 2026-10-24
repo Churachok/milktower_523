@@ -16,22 +16,43 @@ import ApplicationDetail from "./pages/ApplicationDetail";
 import Documents from "./pages/Documents";
 import Employee from "./pages/Employee";
 import Support from "./pages/Support";
-import { routeForRole } from "./domain/navigation";
+import Home, { HowItWorks } from "./pages/Home";
+import Login from "./pages/Login";
+import Profile from "./pages/Profile";
+import PublicLayout from "./components/PublicLayout";
+import {
+  isPublicRoute,
+  routeAfterLogin,
+  routeForRole,
+} from "./domain/navigation";
+import { calculateLoan } from "./domain/application";
 const readRole = () => {
   if (api.mode !== "mock") return "login";
   try {
-    return (
-      sessionStorage.getItem("potok.role") ||
-      (api.mode === "mock" ? "client" : "login")
-    );
+    const value = sessionStorage.getItem("potok.role");
+    return ["client", "employee"].includes(value) ? value : "login";
   } catch {
-    return api.mode === "mock" ? "client" : "login";
+    return "login";
   }
 };
-const readRoute = () => window.location.hash.replace(/^#/, "") || "/overview";
+const readRoute = () => window.location.hash.replace(/^#/, "") || "/";
+function readPendingLoan() {
+  try {
+    const value = JSON.parse(sessionStorage.getItem("potok.pendingLoan"));
+    return value &&
+      ["working", "equipment"].includes(value.productId) &&
+      calculateLoan(value.productId, value.amount, value.term)
+      ? value
+      : null;
+  } catch {
+    return null;
+  }
+}
 export default function App() {
   const [route, setRoute] = useState(readRoute);
   const [role, setRole] = useState(readRole);
+  const publicPage = isPublicRoute(route);
+  const [pendingLoan, setPendingLoan] = useState(readPendingLoan);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -39,14 +60,18 @@ export default function App() {
   const [mobileNav, setMobileNav] = useState(false);
   const [panel, setPanel] = useState(null);
   const [creating, setCreating] = useState(false);
-  const [calculatorValue, setCalculatorValue] = useState({
-    productId: "working",
-    amount: 1000000,
-    term: 24,
-  });
+  const [calculatorValue, setCalculatorValue] = useState(
+    () =>
+      readPendingLoan() || {
+        productId: "working",
+        amount: 1000000,
+        term: 24,
+      },
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const toastTimer = useRef();
+  const reviewedRoute = useRef(null);
   const notify = useCallback((text, type = "success") => {
     clearTimeout(toastTimer.current);
     setToast({ text, type });
@@ -56,6 +81,7 @@ export default function App() {
     if (window.location.hash === `#${path}`) setRoute(path);
     else window.location.hash = path;
     setMobileNav(false);
+    setPanel(null);
     window.scrollTo({ top: 0 });
   }, []);
   const refresh = useCallback(async () => {
@@ -74,8 +100,23 @@ export default function App() {
     }
   }, []);
   useEffect(() => {
+    const hash = () => {
+      setRoute(readRoute());
+      setMobileNav(false);
+      setPanel(null);
+      window.scrollTo({ top: 0 });
+    };
+    window.addEventListener("hashchange", hash);
+    return () => window.removeEventListener("hashchange", hash);
+  }, []);
+  useEffect(() => {
+    if (role === "login" || publicPage) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    invalidateDemo();
     refresh().catch(() => {});
-    const hash = () => setRoute(readRoute());
     const sync = () => refresh().catch(() => {});
     const storage = (e) => {
       if (e.key === "potok.applications.v1") {
@@ -83,30 +124,65 @@ export default function App() {
         sync();
       }
     };
-    window.addEventListener("hashchange", hash);
     window.addEventListener("potok-change", sync);
     window.addEventListener("storage", storage);
     return () => {
-      window.removeEventListener("hashchange", hash);
       window.removeEventListener("potok-change", sync);
       window.removeEventListener("storage", storage);
-      clearTimeout(toastTimer.current);
     };
-  }, [refresh]);
+  }, [role, publicPage, refresh]);
+  useEffect(() => () => clearTimeout(toastTimer.current), []);
   useEffect(() => {
-    document.title = `${role === "employee" ? "Рабочее место" : "Кредитный кабинет"} — Milk Tower`;
-  }, [role]);
-  function changeRole(value) {
-    if (value === role) return;
-    const destination = routeForRole(route, value, applications);
+    if (route.startsWith("/applications/")) reviewedRoute.current = route;
+    else if (route !== "/profile") reviewedRoute.current = null;
+  }, [route]);
+  useEffect(() => {
+    const title =
+      {
+        "/": "Финансирование для бизнеса",
+        "/products": "Кредиты для бизнеса",
+        "/how-it-works": "Как это работает",
+        "/login": "Вход в кабинет",
+      }[route] || (role === "employee" ? "Рабочее место" : "Личный кабинет");
+    document.title = `${title} — Milk Tower`;
+  }, [role, route]);
+  function persistRole(value) {
     setRole(value);
     try {
-      sessionStorage.setItem("potok.role", value);
+      if (value === "login") sessionStorage.removeItem("potok.role");
+      else sessionStorage.setItem("potok.role", value);
     } catch {}
+  }
+  async function login(value) {
+    if (api.mode === "mock") invalidateDemo();
+    let created;
+    if (pendingLoan && value === "client" && route === "/login")
+      created = await api.create(pendingLoan.productId, pendingLoan);
+    await refresh();
+    persistRole(value);
+    setPendingLoan(null);
+    try {
+      sessionStorage.removeItem("potok.pendingLoan");
+    } catch {}
+    navigate(
+      created
+        ? `/applications/${created.id}/edit`
+        : routeAfterLogin(route, value),
+    );
+  }
+  function changeRole(value) {
+    if (value === role) return;
+    const destination = routeForRole(
+      route === "/profile" ? reviewedRoute.current || route : route,
+      value,
+      applications,
+    );
+    persistRole(value);
     setPanel(null);
-    if (api.mode === "http" && value !== "login") {
-      setLoading(true);
-      refresh().catch(() => {});
+    if (value === "login") {
+      setApplications([]);
+      setError("");
+      setToast(null);
     }
     navigate(destination);
   }
@@ -135,6 +211,15 @@ export default function App() {
     }
   }
   async function createApplication(productId, terms) {
+    if (role !== "client") {
+      const pending = { productId, ...terms };
+      setPendingLoan(pending);
+      try {
+        sessionStorage.setItem("potok.pendingLoan", JSON.stringify(pending));
+      } catch {}
+      navigate("/login");
+      return;
+    }
     if (creating) return;
     setCreating(true);
     try {
@@ -163,14 +248,13 @@ export default function App() {
         { path: "/documents", icon: "folder", name: "Документы" },
       ]
     : [
-        { path: "/overview", icon: "grid", name: "Обзор" },
+        { path: "/overview", icon: "grid", name: "Мой кабинет" },
         {
           path: "/applications",
           icon: "file",
           name: "Мои заявки",
           badge: applications.length,
         },
-        { path: "/products", icon: "wallet", name: "Кредитные продукты" },
         { path: "/documents", icon: "folder", name: "Документы" },
       ];
   const activeRoute = appId
@@ -185,7 +269,12 @@ export default function App() {
       ? "Очередь заявок"
       : "Мои заявки"
     : routes.find((n) => n.path === activeRoute)?.name ||
-      (route === "/support" ? "Поддержка" : "Кабинет");
+      {
+        "/support": "Поддержка",
+        "/profile": "Профиль",
+        "/products": "Новая заявка",
+      }[route] ||
+      "Кабинет";
   const common = {
     applications,
     navigate,
@@ -196,6 +285,7 @@ export default function App() {
     calculatorValue,
     setCalculatorValue,
     creating,
+    requiresLogin: role !== "client",
   };
   let page;
   if (appId)
@@ -243,6 +333,16 @@ export default function App() {
       />
     );
   else if (route === "/support") page = <Support {...common} />;
+  else if (route === "/profile")
+    page = (
+      <Profile
+        role={role}
+        changeRole={changeRole}
+        logout={logout}
+        loggingOut={loggingOut}
+        onReset={() => setPanel("reset")}
+      />
+    );
   else
     page = (
       <Empty
@@ -254,7 +354,28 @@ export default function App() {
         </Button>
       </Empty>
     );
-  if (role === "login") return <Login onLogin={changeRole} />;
+  if (
+    (publicPage && (route !== "/products" || role !== "client")) ||
+    role === "login"
+  ) {
+    let publicContent;
+    if (route === "/") publicContent = <Home navigate={navigate} role={role} />;
+    else if (route === "/products") publicContent = <Products {...common} />;
+    else if (route === "/how-it-works")
+      publicContent = <HowItWorks navigate={navigate} />;
+    else
+      publicContent = (
+        <Login
+          onLogin={login}
+          pendingLoan={route === "/login" ? pendingLoan : null}
+        />
+      );
+    return (
+      <PublicLayout route={route} role={role} navigate={navigate}>
+        {publicContent}
+      </PublicLayout>
+    );
+  }
   return (
     <div className="app-shell">
       <a
@@ -278,27 +399,16 @@ export default function App() {
         <button
           className="brand-button"
           aria-label="Milk Tower — главная"
-          onClick={() => navigate(employee ? "/queue" : "/overview")}
+          onClick={() => navigate("/")}
         >
           <Brand />
         </button>
         <div className="company-switch">
-          <span className="company-avatar">
-            <Icon name={employee ? "briefcase" : "building"} size={20} />
-          </span>
           <span>
             <strong>{employee ? "Кредитный отдел" : "Мануфактура"}</strong>
-            <small>
-              {employee
-                ? "Рабочее пространство"
-                : "Общество с ограниченной отв."}
-            </small>
+            <small>{employee ? "Сотрудник банка" : "ООО"}</small>
           </span>
-          <Icon name="down" size={14} />
         </div>
-        <span className="nav-caption">
-          {employee ? "РАБОЧЕЕ ПРОСТРАНСТВО" : "ВАШ КАБИНЕТ"}
-        </span>
         <nav aria-label="Основная навигация">
           {routes.map((n) => (
             <button
@@ -313,6 +423,14 @@ export default function App() {
             </button>
           ))}
         </nav>
+        <button
+          className={`nav-item ${route === "/profile" ? "active" : ""}`}
+          onClick={() => navigate("/profile")}
+          aria-current={route === "/profile" ? "page" : undefined}
+        >
+          <Icon name="users" />
+          <span>Профиль</span>
+        </button>
         <div className="sidebar-divider" />
         <button
           className={`nav-item ${route === "/support" ? "active" : ""}`}
@@ -320,27 +438,8 @@ export default function App() {
         >
           <Icon name="chat" />
           <span>Поддержка</span>
-          <span className="online-dot" />
         </button>
         <div className="sidebar-spacer" />
-        {!employee && (
-          <div className="manager-card">
-            <div className="manager-card-label">ВАШ БИЗНЕС-ПАРТНЁР</div>
-            <div className="manager-info">
-              <span className="avatar manager-avatar">
-                ЕС
-                <i />
-              </span>
-              <div>
-                <strong>Елена Смирнова</strong>
-                <small>Поможет с любым вопросом</small>
-              </div>
-            </div>
-            <button onClick={() => navigate("/support")}>
-              Написать менеджеру <Icon name="arrow" size={15} />
-            </button>
-          </div>
-        )}
         <div className="sidebar-bottom">
           <Icon name="shield" size={16} />
           <span>
@@ -348,7 +447,6 @@ export default function App() {
               ? "Демонстрационный кабинет"
               : "Защищённое соединение"}
           </span>
-          <span className="version-label">v1.0</span>
         </div>
       </aside>
       <div className="workspace">
@@ -371,22 +469,6 @@ export default function App() {
             <strong>{breadcrumbs}</strong>
           </div>
           <div className="topbar-right">
-            {api.mode === "mock" && (
-              <div className="role-switch" aria-label="Демонстрационная роль">
-                <button
-                  onClick={() => changeRole("client")}
-                  className={!employee ? "selected" : ""}
-                >
-                  Клиент
-                </button>
-                <button
-                  onClick={() => changeRole("employee")}
-                  className={employee ? "selected" : ""}
-                >
-                  Сотрудник
-                </button>
-              </div>
-            )}
             <button
               className="notification-button icon-button"
               aria-label="Уведомления"
@@ -400,7 +482,7 @@ export default function App() {
             <span className="topbar-divider" />
             <button
               className="profile-button"
-              onClick={() => setPanel("profile")}
+              onClick={() => navigate("/profile")}
               aria-label="Открыть профиль"
             >
               <span className={`avatar ${employee ? "staff-avatar" : ""}`}>
@@ -481,46 +563,6 @@ export default function App() {
           </button>
         </div>
       )}
-      {panel === "profile" && (
-        <Modal title="Профиль" onClose={() => setPanel(null)}>
-          <div className="profile-summary">
-            <span className="avatar large-avatar">
-              {employee ? "ЕС" : "АВ"}
-            </span>
-            <h3>{employee ? "Елена Смирнова" : "Александр Волков"}</h3>
-            <p>
-              {employee
-                ? "Кредитный специалист"
-                : "ООО «Мануфактура» · ИНН 5408123456"}
-            </p>
-          </div>
-          {api.mode === "mock" && (
-            <Notice>
-              В демо переключение ролей служит для проверки сценария.
-              Промышленная авторизация и доступы должны проверяться сервером.
-            </Notice>
-          )}
-          <div className="profile-actions">
-            {api.mode === "mock" && (
-              <Button
-                variant="secondary"
-                icon="rotate"
-                onClick={() => setPanel("reset")}
-              >
-                Восстановить демо-данные
-              </Button>
-            )}
-            <Button
-              variant="danger-quiet"
-              icon="logout"
-              loading={loggingOut}
-              onClick={logout}
-            >
-              Выйти из кабинета
-            </Button>
-          </div>
-        </Modal>
-      )}
       {panel === "reset" && (
         <Modal title="Восстановить демо-данные?" onClose={() => setPanel(null)}>
           <p className="modal-description">
@@ -585,116 +627,6 @@ export default function App() {
           )}
         </Modal>
       )}
-    </div>
-  );
-}
-function Login({ onLogin }) {
-  const [selected, setSelected] = useState("client");
-  const [busy, setBusy] = useState(false);
-  const [loginError, setLoginError] = useState("");
-  async function checkSession() {
-    setBusy(true);
-    setLoginError("");
-    try {
-      const session = await api.session();
-      if (!["client", "employee"].includes(session?.role))
-        throw new Error("Сервер не вернул допустимую роль");
-      onLogin(session.role);
-    } catch (error) {
-      setLoginError(error.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <div className="login-page">
-      <div className="login-brand">
-        <Brand />
-      </div>
-      <section className="login-story">
-        <span className="eyebrow">MILK TOWER · БИЗНЕС</span>
-        <h1>
-          Кредитный кабинет
-          <br />
-          вашей компании.
-        </h1>
-        <p>
-          Подайте заявку, отправьте документы
-          <br />и получите решение банка онлайн.
-        </p>
-        <img
-          className="login-brand-art"
-          src="/brand/milk-tower.svg"
-          alt="Бутылка молока на стопке купюр — логотип Milk Tower"
-        />
-        <small>Кредитный кабинет предпринимателя</small>
-      </section>
-      <section className="login-form card">
-        <span className="product-icon large">
-          <Icon name="shield" size={26} />
-        </span>
-        <h2>Добро пожаловать</h2>
-        <p>Войдите в свой кредитный кабинет</p>
-        {api.mode === "mock" ? (
-          <>
-            <div className="role-switch login-role">
-              <button
-                className={selected === "client" ? "selected" : ""}
-                onClick={() => setSelected("client")}
-              >
-                Я предприниматель
-              </button>
-              <button
-                className={selected === "employee" ? "selected" : ""}
-                onClick={() => setSelected("employee")}
-              >
-                Я сотрудник
-              </button>
-            </div>
-            <div className="demo-user">
-              <span className="avatar">
-                {selected === "client" ? "АВ" : "ЕС"}
-              </span>
-              <div>
-                <strong>
-                  {selected === "client"
-                    ? "Александр Волков"
-                    : "Елена Смирнова"}
-                </strong>
-                <small>
-                  {selected === "client"
-                    ? "ООО «Мануфактура»"
-                    : "Кредитный специалист"}
-                </small>
-              </div>
-            </div>
-            <Button onClick={() => onLogin(selected)}>
-              Войти в демо-кабинет <Icon name="arrow" size={18} />
-            </Button>
-            <small className="legal-note">
-              Синтетическая учётная запись. Пароль не требуется.
-            </small>
-          </>
-        ) : (
-          <>
-            <Notice tone="amber">
-              Подключён HTTP-адаптер. Для входа требуется серверная сессия.
-              Авторизацию необходимо интегрировать с командой бэкенда.
-            </Notice>
-            {loginError && (
-              <p className="error-text" role="alert">
-                {loginError}
-              </p>
-            )}
-            <Button loading={busy} onClick={checkSession}>
-              Проверить серверную сессию
-            </Button>
-          </>
-        )}
-      </section>
-      <div className="login-footer">
-        © 2026 Milk Tower · Умный кредитный кабинет
-      </div>
     </div>
   );
 }

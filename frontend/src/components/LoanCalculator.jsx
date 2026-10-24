@@ -8,7 +8,13 @@ import {
   validateLoanTerms,
 } from "../domain/application";
 
-export default function LoanCalculator({ value, onChange, onContinue, busy }) {
+export default function LoanCalculator({
+  value,
+  onChange,
+  onContinue,
+  busy,
+  requiresLogin = false,
+}) {
   const titleId = useId();
   const product = productOf(value.productId);
   const errors = validateLoanTerms(value.productId, value.amount, value.term);
@@ -70,6 +76,7 @@ export default function LoanCalculator({ value, onChange, onContinue, busy }) {
           </button>
         ))}
       </div>
+      <p className="calculator-description">{product.description}</p>
       <form className="calculator-layout" onSubmit={submit} noValidate>
         <div className="calculator-inputs">
           <div className="calculator-control">
@@ -188,7 +195,11 @@ export default function LoanCalculator({ value, onChange, onContinue, busy }) {
             Продолжить с этими условиями
             <Icon name="arrow" size={17} />
           </Button>
-          <small>Сумма и срок перенесутся в новый черновик.</small>
+          <small>
+            {requiresLogin
+              ? "Для оформления понадобится вход в кабинет."
+              : "Сумма и срок перенесутся в новый черновик."}
+          </small>
         </div>
       </form>
     </section>

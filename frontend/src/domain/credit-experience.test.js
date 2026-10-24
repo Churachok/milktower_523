@@ -137,5 +137,5 @@ test("role switch keeps drafts client-only and handles lists, missing cards and 
   );
   assert.equal(routeForRole("/overview", "employee", apps), "/queue");
   assert.equal(routeForRole("/queue", "client", apps), "/overview");
-  assert.equal(routeForRole("/applications/A-1", "login", apps), "/overview");
+  assert.equal(routeForRole("/applications/A-1", "login", apps), "/");
 });

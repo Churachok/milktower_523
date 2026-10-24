@@ -2,9 +2,11 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
+from app.api import applications, session
 from app.config import get_settings
 from app.db import get_engine, run_migrations
 from app.errors import register_errors
@@ -30,6 +32,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Milk Tower backend", lifespan=lifespan)
 register_errors(app)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in get_settings().cors_origins.split(",") if o.strip()],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.include_router(session.router)
+app.include_router(applications.router)
 
 
 @app.get("/healthz")

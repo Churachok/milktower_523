@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from app.api import applications, session
+from app.api import actions, applications, session
 from app.config import get_settings
 from app.db import get_engine, run_migrations
 from app.errors import register_errors
@@ -41,6 +41,7 @@ app.add_middleware(
 )
 app.include_router(session.router)
 app.include_router(applications.router)
+app.include_router(actions.router)
 
 
 @app.get("/healthz")

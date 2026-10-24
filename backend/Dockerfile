@@ -9,6 +9,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 COPY app ./app
+COPY migrations ./migrations
 RUN useradd -r -u 10001 app && mkdir /data && chown app /data
 USER app
 EXPOSE 8000

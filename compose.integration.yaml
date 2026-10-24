@@ -82,7 +82,7 @@ services:
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=128m,mode=1777
     cap_drop: [ALL]
-    security_opt: ["no-new-privileges:true"]
+    # security_opt is inherited from compose.yaml; repeating it breaks some Compose versions.
     restart: unless-stopped
     logging:
       driver: json-file

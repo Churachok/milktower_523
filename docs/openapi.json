@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Milk Tower — предлагаемый контракт frontend/backend",
-    "version": "1.0.0",
-    "description": "Integration proposal, not an implemented backend. Synthetic mock uses the same Application shape. Server authentication/session integration remains with the backend team."
+    "title": "Milk Tower — frontend/backend API",
+    "version": "1.1.0",
+    "description": "Implemented FastAPI/SQLite backend with synthetic demo sessions, role checks and HTTP ML scoring. Demo login is intended for synthetic data only."
   },
   "servers": [
     {
@@ -668,6 +668,60 @@
             "description": "Logged out"
           }
         }
+      },
+      "post": {
+        "summary": "Create a synthetic server session",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "login"
+                ],
+                "properties": {
+                  "login": {
+                    "type": "string",
+                    "enum": [
+                      "volkov",
+                      "smirnova",
+                      "ivanova"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "HttpOnly session cookie and authenticated role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "role"
+                  ],
+                  "properties": {
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "client",
+                        "employee"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Demo login disabled or unknown user"
+          }
+        }
       }
     }
   },
@@ -857,6 +911,14 @@
                 "type": "null"
               }
             ]
+          },
+          "scoringResult": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Persisted ML response: decision, message, approved_amount, checks, features and assumptions. Cleared when resubmitted after clarification.",
+            "additionalProperties": true
           }
         }
       },

@@ -1,25 +1,30 @@
 import os
-from dotenv import load_dotenv
-load_dotenv()
 import sys
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from domain.scoring import calculate_score
-from fastapi import FastAPI, HTTPException, File, UploadFile
-from pydantic import BaseModel
-from typing import Dict, Any
 from io import BytesIO
+from pathlib import Path
+from typing import Any, Dict
+
+from dotenv import load_dotenv
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from groq import Groq
+from pydantic import BaseModel, Field
 from pypdf import PdfReader
 
-# Добавляем путь к domain, чтобы импортировать функции скоринга
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from domain.scoring import calculate_score
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from demo import score_application as score_demo
 from domain.result_builder import build_result_payload
+from domain.scoring import calculate_score
 
-app = FastAPI(title="ML Scoring API")
+load_dotenv()
+app = FastAPI(title="ML Scoring API (optional AI helpers)")
 
-# Инициализация клиента Groq (ключ берется из переменной окружения)
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+def get_groq_client():
+    key = os.getenv("GROQ_API_KEY")
+    if not key:
+        raise HTTPException(status_code=503, detail="GROQ_API_KEY not configured")
+    return Groq(api_key=key, timeout=10, max_retries=0)
+
 
 # --- Модели данных (Pydantic) ---
 
@@ -48,7 +53,7 @@ class ScoringRequest(BaseModel):
 class ExtractedDocumentData(BaseModel):
     revenue: float
     expenses: float
-    other_items: Dict[str, Any] = {}
+    other_items: Dict[str, Any] = Field(default_factory=dict)
     summary: str
 
 # --- Эндпоинты ---
@@ -56,6 +61,14 @@ class ExtractedDocumentData(BaseModel):
 @app.get("/healthz")
 def health_check():
     return {"status": "ok"}
+
+@app.post("/score")
+def score_frontend(payload: dict):
+    try:
+        return score_demo(payload)
+    except (ValueError, TypeError, OverflowError) as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
 
 @app.post("/api/v1/score")
 def score_application(req: ScoringRequest):
@@ -69,13 +82,16 @@ def score_application(req: ScoringRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/v1/extract-document")
-async def extract_document(file: UploadFile = File(...)):
+def extract_document(file: UploadFile = File(...)):
     """Разбор PDF документа через Groq."""
-    if not groq_client.api_key:
-        raise HTTPException(status_code=500, detail="GROQ_API_KEY not configured")
+    groq_client = get_groq_client()
 
+    if not (file.filename or "").lower().endswith(".pdf"):
+        raise HTTPException(status_code=415, detail="Only PDF is supported")
+    pdf_content = file.file.read(10 * 1024 * 1024 + 1)
+    if not pdf_content or len(pdf_content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="PDF must be nonempty and at most 10 MiB")
     try:
-        pdf_content = await file.read()
         reader = PdfReader(BytesIO(pdf_content))
         text = ""
         for page in reader.pages:
@@ -114,10 +130,9 @@ async def extract_document(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Groq API error: {e}")
 
 @app.post("/api/v1/generate-client-request")
-async def generate_client_request(application_data: dict):
+def generate_client_request(application_data: dict):
     """Генерация AI-запроса клиенту от лица сотрудника."""
-    if not groq_client.api_key:
-        raise HTTPException(status_code=500, detail="GROQ_API_KEY not configured")
+    groq_client = get_groq_client()
 
     prompt = f"""
     Ты — сотрудник кредитного отдела банка. На основе данных заявки сформируй вежливый и четкий запрос дополнительной информации у клиента.

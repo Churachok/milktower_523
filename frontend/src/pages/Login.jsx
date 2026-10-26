@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Button, Icon, Notice } from "../components/ui";
+import { Button, Icon } from "../components/ui";
 import { api } from "../services/api";
 
 export default function Login({ onLogin, pendingLoan }) {
@@ -11,7 +11,7 @@ export default function Login({ onLogin, pendingLoan }) {
     setBusy(true);
     setError("");
     try {
-      const role = api.mode === "mock" ? selected : (await api.session())?.role;
+      const role = (await api.login(selected))?.role;
       if (!["client", "employee"].includes(role))
         throw new Error("Сервер не вернул допустимую роль");
       await onLogin(role);
@@ -33,63 +33,52 @@ export default function Login({ onLogin, pendingLoan }) {
           : "Заявки, документы и решения по кредитам — в одном месте."}
       </p>
       <form onSubmit={submit}>
-        {api.mode === "mock" ? (
-          <fieldset className="sign-in-roles" disabled={busy}>
-            <legend>Выберите роль</legend>
-            {[
-              {
-                value: "client",
-                label: "Предприниматель",
-                description: "Подать заявку и получить решение",
-              },
-              {
-                value: "employee",
-                label: "Сотрудник",
-                description: "Рассмотреть заявки клиентов",
-              },
-            ].map((item) => (
-              <label
-                key={item.value}
-                className={selected === item.value ? "selected" : ""}
-              >
-                <input
-                  type="radio"
-                  name="role"
-                  value={item.value}
-                  checked={selected === item.value}
-                  onChange={() => setSelected(item.value)}
-                />
-                <span>
-                  <strong>{item.label}</strong>
-                  <small>{item.description}</small>
-                </span>
-              </label>
-            ))}
-          </fieldset>
-        ) : (
-          <Notice>
-            Для входа нужна действующая серверная сессия. Подключение
-            авторизации выполняет команда backend.
-          </Notice>
-        )}
+        <fieldset className="sign-in-roles" disabled={busy}>
+          <legend>Выберите роль</legend>
+          {[
+            {
+              value: "client",
+              label: "Предприниматель",
+              description: "Подать заявку и получить решение",
+            },
+            {
+              value: "employee",
+              label: "Сотрудник",
+              description: "Рассмотреть заявки клиентов",
+            },
+          ].map((item) => (
+            <label
+              key={item.value}
+              className={selected === item.value ? "selected" : ""}
+            >
+              <input
+                type="radio"
+                name="role"
+                value={item.value}
+                checked={selected === item.value}
+                onChange={() => setSelected(item.value)}
+              />
+              <span>
+                <strong>{item.label}</strong>
+                <small>{item.description}</small>
+              </span>
+            </label>
+          ))}
+        </fieldset>
         {error && (
           <p className="error-text" role="alert">
             {error}
           </p>
         )}
         <Button type="submit" loading={busy}>
-          {api.mode === "mock"
-            ? "Войти в демо-кабинет"
-            : "Проверить серверную сессию"}
+          Войти в демо-кабинет
           <Icon name="arrow" size={18} />
         </Button>
       </form>
-      {api.mode === "mock" && (
-        <small className="legal-note">
-          Демонстрационный вход без пароля. Используются только синтетические
-          данные.
-        </small>
-      )}
+      <small className="legal-note">
+        Демонстрационный вход без пароля. Используются только синтетические
+        данные.
+      </small>
     </section>
   );
 }

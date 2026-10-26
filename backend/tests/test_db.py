@@ -25,6 +25,18 @@ def test_migrations_repeatable(client):
     run_migrations()
 
 
+def test_upgrade_existing_database_preserves_applications(client):
+    from sqlalchemy import inspect
+
+    with get_engine().begin() as connection:
+        connection.exec_driver_sql("ALTER TABLE applications DROP COLUMN scoring_result")
+        connection.exec_driver_sql("UPDATE alembic_version SET version_num = '0001'")
+    run_migrations()
+    assert "scoring_result" in {c["name"] for c in inspect(get_engine()).get_columns("applications")}
+    with Session(get_engine()) as db:
+        assert set(db.scalars(select(Application.id))) == IDS
+
+
 def test_foreign_keys_enabled(client):
     with get_engine().connect() as c:
         assert c.exec_driver_sql("PRAGMA foreign_keys").scalar() == 1

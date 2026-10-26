@@ -30,6 +30,7 @@ def serialize(a: Application) -> dict:
         "messages": a.messages,
         "calculation": a.calculation,
         "checks": a.checks,
+        "scoringResult": a.scoring_result,
         "request": a.request,
         "createdAt": a.created_at,
         "updatedAt": a.updated_at,

@@ -2,6 +2,9 @@
 # Apply after compose.yaml and compose.integration.yaml; CPU remains the default.
 services:
   ml:
+    cpus: 2.0
+    mem_limit: 3g
+    mem_reservation: 512m
     image: ${ML_GPU_IMAGE:-milk-tower-ml-gpu:local}
     build:
       dockerfile: Dockerfile.gpu

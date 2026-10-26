@@ -1,50 +1,131 @@
+# Default application: React/Nginx → backend/SQLite → Python scoring.
 name: milk-tower
-
 services:
   frontend:
-    image: milk-tower-frontend:demo
+    image: milk-tower-frontend:integration
     build:
       context: ./frontend
-      target: demo
+      target: integration
     ports:
-      - "127.0.0.1:${APP_PORT:-8080}:8080"
+    - 127.0.0.1:${APP_PORT:-8080}:8080
     restart: unless-stopped
-    cpus: 1.0
+    cpus: 0.5
     mem_limit: 128m
     mem_reservation: 32m
     pids_limit: 64
     read_only: true
     tmpfs:
-      - /tmp:rw,noexec,nosuid,size=16m,mode=1777
+    - /tmp:rw,noexec,nosuid,size=16m,mode=1777
     cap_drop:
-      - ALL
+    - ALL
     security_opt:
-      - no-new-privileges:true
+    - no-new-privileges:true
     stop_grace_period: 10s
     depends_on:
       ml:
         condition: service_healthy
+      backend:
+        condition: service_healthy
     logging:
       driver: json-file
       options:
-        max-size: "5m"
-        max-file: "2"
-
+        max-size: 5m
+        max-file: '2'
   ml:
-    image: milk-tower-ml:demo
+    image: ${ML_IMAGE:-milk-tower-ml:local}
     build:
       context: ./ml
     expose:
-      - "8001"
+    - '8001'
     cpus: 0.5
     mem_limit: 128m
-    pids_limit: 64
+    pids_limit: 256
     read_only: true
-    cap_drop: [ALL]
-    security_opt: ["no-new-privileges:true"]
+    cap_drop:
+    - ALL
+    security_opt:
+    - no-new-privileges:true
     restart: unless-stopped
     logging:
       driver: json-file
       options:
-        max-size: "5m"
-        max-file: "2"
+        max-size: 5m
+        max-file: '2'
+    environment:
+      PORT: '8001'
+      ML_DEVICE: cpu
+      CUDA_VISIBLE_DEVICES: ''
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      OPENBLAS_NUM_THREADS: '2'
+      NUMEXPR_NUM_THREADS: '2'
+      TOKENIZERS_PARALLELISM: 'false'
+      XDG_CACHE_HOME: /cache
+      HF_HOME: /cache/huggingface
+    volumes:
+    - ml-cache:/cache
+    healthcheck:
+      test:
+      - CMD
+      - python
+      - -c
+      - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/healthz',
+        timeout=2)
+      interval: 10s
+      timeout: 3s
+      start_period: 60s
+      retries: 6
+    mem_reservation: 32m
+    init: true
+    tmpfs:
+    - /tmp:rw,noexec,nosuid,size=128m,mode=1777
+  backend:
+    image: ${BACKEND_IMAGE:-milk-tower-backend:local}
+    build:
+      context: ./backend
+    expose:
+    - '8000'
+    environment:
+      PORT: '8000'
+      DATA_DIR: /data
+      ML_BASE_URL: http://ml:8001
+    volumes:
+    - backend-data:/data
+    depends_on:
+      ml:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD
+      - curl
+      - --fail
+      - --silent
+      - --show-error
+      - --max-time
+      - '2'
+      - http://127.0.0.1:8000/healthz
+      interval: 10s
+      timeout: 3s
+      start_period: 30s
+      retries: 6
+    cpus: 1.0
+    mem_limit: 1g
+    mem_reservation: 256m
+    pids_limit: 128
+    init: true
+    read_only: true
+    tmpfs:
+    - /tmp:rw,noexec,nosuid,size=64m,mode=1777
+    cap_drop:
+    - ALL
+    security_opt:
+    - no-new-privileges:true
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: '2'
+volumes:
+  backend-data: null
+  ml-cache: null

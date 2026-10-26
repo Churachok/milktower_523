@@ -61,7 +61,7 @@ def list_applications(db: Db, user: CurrentUser):
 def create_application(db: Db, user: CurrentUser, body: Annotated[dict, Body()]):
     _require_client(user)
     product = body.get("productId")
-    if product not in PRODUCTS:
+    if not isinstance(product, str) or product not in PRODUCTS:
         raise _bad("Неизвестный кредитный продукт")
     amount, term = _num(body.get("amount")), _num(body.get("term"))
     error = terms_error(product, amount, term)
@@ -100,7 +100,7 @@ def update_draft(app_id: str, db: Db, user: CurrentUser, body: Annotated[dict, B
     if unknown:
         raise _bad("Недопустимые поля: " + ", ".join(sorted(unknown)))
     if "productId" in body:
-        if body["productId"] not in PRODUCTS:
+        if not isinstance(body["productId"], str) or body["productId"] not in PRODUCTS:
             raise _bad("Неизвестный кредитный продукт")
         a.product_id = body["productId"]
     if "amount" in body:

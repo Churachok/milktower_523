@@ -11,16 +11,18 @@ node scripts/check-repository.mjs
 npm ci --prefix frontend
 npm test --prefix frontend
 PYTHONPATH=ml python3 -m unittest discover -s ml/tests -v
+uv run --project backend pytest -q backend/tests
+uv run --project backend ruff check backend
 npm run build --prefix frontend
 docker compose config --quiet
 docker compose -f compose.yaml -f compose.integration.yaml config --quiet
 docker compose -f compose.yaml -f compose.integration.yaml -f compose.gpu.yaml config --quiet
-docker compose up --build -d --wait --wait-timeout 60
+docker compose up --build -d --wait --wait-timeout 180
 docker compose exec -T frontend nginx -t
 node scripts/smoke.mjs
 ```
 
-Затем пройти [основной сценарий](../README.md#пошаговый-сценарий-проверки-демо) в браузере. Фактически выполненные проверки и ограничения описаны в [verification.md](verification.md). На GitHub для новых коммитов и pull request настроен [CI](../.github/workflows/ci.yml).
+Затем пройти [основной сценарий](../README.md#сценарий-проверки) в браузере. Фактически выполненные проверки и ограничения описаны в [verification.md](verification.md). На GitHub для новых коммитов и pull request настроен [CI](../.github/workflows/ci.yml).
 
 ## Что заполняют участники перед финальной сдачей
 
@@ -30,7 +32,7 @@ node scripts/smoke.mjs
 | [Backend](../backend/README.md) | Дмитрий | Код, Dockerfile, runtime/lock-файл, сессии, синтетические учётные записи и seed, хранение, миграции, актуальный OpenAPI, тесты и лицензии |
 | [ML](../ml/README.md) | Михаил | Код/правила, CPU Dockerfile, модель и манифест, источник/лицензия/хеш артефактов, признаки, метрики, ограничения и тесты |
 
-После добавления backend пройти общий запуск `docker compose --parallel 1 -f compose.yaml -f compose.integration.yaml up --build -d --wait --wait-timeout 180` и сквозной сценарий с серверными сессиями. GPU — дополнительный вариант; базовая версия должна воспроизводиться на CPU. Проверить пиковую память, автономность запуска и сохранение данных. Обновить таблицу готовности в README, архитектуру, THIRD_PARTY_NOTICES и результаты проверки. Текущий комплект — frontend + локальный rule-based ML с браузерным хранением; отсутствие полноценного backend указано явно.
+Полный продукт уже объединён в main. Пройти обычный `docker compose up --build -d --wait --wait-timeout 180` и сквозной сценарий с серверными сессиями и настоящим ML. Базовая версия работает на CPU без ключей внешних API. GPU остаётся неподдерживаемым расширением, Groq-помощники включаются отдельно.
 
 ## Фиксация и выгрузка
 
@@ -58,4 +60,4 @@ git rev-parse HEAD
 
 Указать полученный полный hash в форме сдачи вместе со ссылкой на репозиторий. Проверить результат CI именно для этого коммита. В приватном репозитории предоставить доступ аккаунту жюри **`alfa-hack-2026`**. Изменения после дедлайна не входят в проверяемую версию по условиям кейса.
 
-Внешнее развёртывание в облаке не подготовлено. Для текущего демо достаточно клонирования и базовой команды Docker; используются роли интерфейса. Для интегрированной версии Дмитрий добавляет синтетические серверные учётные записи и способ входа, а команда обновляет сценарий README. Нельзя указывать старый hash, который не содержит подготовленные файлы.
+Внешнее облачное развёртывание не подготовлено. Для проверки достаточно клонирования и обычной команды Docker. Демо-пользователи выбираются на странице входа; их сессии и права проверяет backend. Итоговый hash должен включать все исправления, проверять нужно CI именно для него.

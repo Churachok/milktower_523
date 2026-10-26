@@ -1,0 +1,50 @@
+name: milk-tower
+
+services:
+  frontend:
+    image: milk-tower-frontend:demo
+    build:
+      context: ./frontend
+      target: demo
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8080"
+    restart: unless-stopped
+    cpus: 1.0
+    mem_limit: 128m
+    mem_reservation: 32m
+    pids_limit: 64
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 10s
+    depends_on:
+      ml:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  ml:
+    image: milk-tower-ml:demo
+    build:
+      context: ./ml
+    expose:
+      - "8001"
+    cpus: 0.5
+    mem_limit: 128m
+    pids_limit: 64
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"

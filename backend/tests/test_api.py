@@ -22,6 +22,29 @@ def test_unknown_login(client):
     assert r.status_code == 404
 
 
+def test_json_login_rotates_server_session(client):
+    assert client.post(f"{API}/session", json={"login": "volkov"}).json() == {"role": "client"}
+    old_cookie = client.cookies.get("session")
+    response = client.post(f"{API}/session", json={"login": "smirnova"})
+    assert response.json() == {"role": "employee"}
+    assert "HttpOnly" in response.headers["set-cookie"]
+    assert client.get(f"{API}/session").json() == {"role": "employee"}
+    assert client.get(f"{API}/session", headers={"Cookie": f"session={old_cookie}"}).status_code == 401
+
+
+def test_json_login_can_be_disabled(client, monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "demo_login_enabled", False)
+    assert client.post(f"{API}/session", json={"login": "volkov"}).status_code == 404
+    assert client.get(f"{API}/demo/login/volkov").status_code == 404
+
+
+def test_json_login_rejects_unknown_or_malformed_login(client):
+    assert client.post(f"{API}/session", json={"login": "missing"}).status_code == 404
+    assert client.post(f"{API}/session", json={"login": []}).status_code == 400
+
+
 def test_unauthenticated_list(client):
     assert client.get(f"{API}/applications").status_code == 401
 
@@ -82,6 +105,7 @@ def test_create_validation(client):
     r = client.post(f"{API}/applications", json={"productId": "bad",
                                                  "amount": 1, "term": 1})
     assert r.status_code == 400 and "message" in r.json()
+    assert client.post(f"{API}/applications", json={"productId": []}).status_code == 400
 
 
 def test_patch_non_draft_conflict(client):

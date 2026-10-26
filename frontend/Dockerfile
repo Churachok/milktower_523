@@ -40,13 +40,13 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
 ENTRYPOINT ["nginx"]
 CMD ["-g", "daemon off;"]
 
-FROM runtime AS integration
-
-COPY nginx.http.conf /etc/nginx/api.conf
-COPY --from=integration-build /app/dist /usr/share/nginx/html
-
-# Keep the standalone, working demo as the default target for docker build.
 FROM runtime AS demo
 
 COPY nginx.mock.conf /etc/nginx/api.conf
 COPY --from=demo-build /app/dist /usr/share/nginx/html
+
+# A plain docker build produces the complete application frontend.
+FROM runtime AS integration
+
+COPY nginx.http.conf /etc/nginx/api.conf
+COPY --from=integration-build /app/dist /usr/share/nginx/html

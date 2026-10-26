@@ -57,8 +57,8 @@ def _submit_error(a: Application) -> str | None:
         return "Укажите расходы от 0 ₽"
     if debt is None or debt < 0:
         return "Укажите обязательства от 0 ₽"
-    if years is None or years < 1:
-        return "Укажите срок работы бизнеса от 1 года"
+    if years is None or not 1 <= years <= 100:
+        return "Укажите срок работы бизнеса от 1 до 100 лет"
     kinds = {d.get("kind") for d in a.documents}
     if "statement" not in kinds:
         return "Добавьте выписку по расчётному счёту"
@@ -120,7 +120,10 @@ def apply_action(
             or rate is None or rate <= 0 or rate > 100
         ):
             raise _bad("Проверьте сумму, срок и ставку предложения")
-        reason = (body.get("reason") or "").strip() or None
+        raw_reason = body.get("reason")
+        if raw_reason is not None and not isinstance(raw_reason, str):
+            raise _bad("Комментарий должен быть текстом")
+        reason = (raw_reason or "").strip() or None
         expires = datetime.now(UTC) + timedelta(days=14)
         offer = {
             "amount": int(amount) if amount.is_integer() else amount,
@@ -136,6 +139,8 @@ def apply_action(
                 409, "offer_expired", "Срок предложения истёк. Обратитесь к менеджеру."
             )
 
+    assessment = run_checks(a) if target == "manual_review" else None
+
     # --- атомарная смена статуса: повторный или конкурирующий запрос не пройдёт ---
     result = db.execute(
         update(Application)
@@ -149,6 +154,8 @@ def apply_action(
 
     # --- побочные изменения и история ---
     if target == "submitted":
+        a.checks = None
+        a.scoring_result = None
         title = "Заявка отправлена"
         if src == "needs_info":
             detail = "Дополнительные сведения переданы банку."
@@ -162,9 +169,10 @@ def apply_action(
             detail = "Начинаем проверку данных и документов."
     elif target == "manual_review":
         title = "Заявка на рассмотрении"
-        detail = "Демонстрационные проверки завершены. Решение принимает сотрудник."
-        summary, items = run_checks(a)
+        summary, items, scoring_result = assessment
+        detail = f"ML-скоринг {summary['modelVersion']}: {summary['score']}/1000. Решение принимает сотрудник."
         a.checks = summary
+        a.scoring_result = scoring_result
         for item in items:
             db.add(Check(application_id=a.id, **item))
     elif target == "needs_info":

@@ -1,0 +1,9 @@
+# Opt in explicitly: docker compose -f compose.yaml -f compose.ai.yaml up --build -d --wait
+services:
+  ml:
+    image: milk-tower-ml:ai
+    build:
+      dockerfile: Dockerfile.ai
+    environment:
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+    mem_limit: 256m

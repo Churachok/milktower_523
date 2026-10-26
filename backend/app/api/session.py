@@ -1,7 +1,7 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Query, Request, Response
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Body, Query, Request, Response
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import select
 
 from app.config import get_settings
@@ -22,6 +22,30 @@ router = APIRouter(prefix="/api/v1")
 @router.get("/session")
 def get_session(user: CurrentUser):
     return {"role": user.role}
+
+
+@router.post("/session")
+def login(request: Request, db: Db, body: Annotated[dict, Body()]):
+    settings = get_settings()
+    if not settings.demo_login_enabled:
+        raise ApiError(404, "not_found", "Демонстрационный вход отключён")
+    login_name = body.get("login")
+    if not isinstance(login_name, str):
+        raise ApiError(400, "validation_error", "Выберите пользователя")
+    user = db.scalar(select(User).where(User.login == login_name))
+    if user is None:
+        raise ApiError(404, "not_found", "Пользователь не найден")
+    old_token = request.cookies.get(SESSION_COOKIE)
+    if old_token:
+        revoke_session(db, old_token)
+    token = create_session(db, user)
+    response = JSONResponse({"role": user.role})
+    response.set_cookie(
+        SESSION_COOKIE, token, httponly=True, samesite="lax",
+        secure=settings.cookie_secure,
+        max_age=int(SESSION_TTL.total_seconds()), path="/",
+    )
+    return response
 
 
 @router.delete("/session", status_code=204)

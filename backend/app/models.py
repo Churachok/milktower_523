@@ -46,6 +46,7 @@ class Application(Base):
     messages: Mapped[list] = mapped_column(JSON, default=list)
     calculation: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     checks: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    scoring_result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     request: Mapped[str | None] = mapped_column(String, nullable=True)
     offer: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     rejection_reason: Mapped[str | None] = mapped_column(String, nullable=True)

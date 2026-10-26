@@ -37,25 +37,12 @@ for (const path of ["/brand/milk-tower.svg", "/favicon.svg", "/fonts/golos-regul
   assert.ok((await asset.arrayBuffer()).byteLength > 0, `${path}: local asset`);
 }
 await request("/assets/missing-smoke-check.js", 404);
-const api = await request("/api/v1/applications", 503);
-assert.match(api.headers.get("content-type") || "", /application\/json/);
-assert.equal(typeof (await api.json()).message, "string");
-
-const health = await request("/ml-api/healthz");
-assert.equal((await health.json()).status, "ok");
-const score = await fetch(new URL("/ml-api/score", base), {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  signal: AbortSignal.timeout(5000),
-  body: JSON.stringify({
-    company: { inn: "5408123456" }, productId: "working", amount: 2400000, term: 18,
-    finances: { revenue: 12000000, expenses: 7000000, debt: 0, years: 3 },
-    documents: [{ kind: "statement" }, { kind: "report" }],
-  }),
-});
-assert.equal(score.status, 200);
-const scored = await score.json();
-assert.equal(scored.checks.source, "rule-based");
-assert.ok(Number.isInteger(scored.checks.score) && scored.checks.score >= 0 && scored.checks.score <= 1000);
-assert.equal(scored.features.monthly_revenue_avg, 1000000);
-console.log("HTTP smoke check passed: SPA, assets, API boundary and real Python scoring through Nginx.");
+if (process.argv.includes("--demo")) {
+  const api = await request("/api/v1/applications", 503);
+  assert.equal(typeof (await api.json()).message, "string");
+  const health = await request("/ml-api/healthz");
+  assert.equal((await health.json()).status, "ok");
+} else {
+  await import("./integration-smoke.mjs");
+}
+console.log("HTTP smoke passed: SPA, assets, Nginx proxy and application API.");

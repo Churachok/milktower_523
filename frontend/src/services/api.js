@@ -8,7 +8,7 @@ import {
   validateLoanTerms,
 } from "../domain/application.js";
 const STORAGE_KEY = "potok.applications.v1";
-const MODE = import.meta.env?.VITE_API_MODE || "mock";
+const MODE = import.meta.env ? import.meta.env.VITE_API_MODE || "http" : "mock";
 const SCORING_MODE = !import.meta.env || import.meta.env.VITE_SCORING_MODE === "static" ? "static" : "http";
 const BASE = (import.meta.env?.VITE_API_BASE_URL || "/api/v1").replace(
   /\/$/,
@@ -72,9 +72,11 @@ async function http(path, options = {}) {
     });
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      throw new Error(
+      const error = new Error(
         body.message || `Не удалось выполнить запрос (${response.status})`,
       );
+      error.status = response.status;
+      throw error;
     }
     return response.status === 204 ? null : await response.json();
   } catch (error) {
@@ -110,6 +112,15 @@ const addEvent = (app, title, detail, actor) => ({
 export const api = {
   mode: MODE,
   scoringMode: SCORING_MODE,
+  async login(role) {
+    if (!["client", "employee"].includes(role)) throw new Error("Выберите роль");
+    return MODE === "http"
+      ? http("/session", {
+          method: "POST",
+          body: JSON.stringify({ login: role === "employee" ? "smirnova" : "volkov" }),
+        })
+      : { role };
+  },
   async logout() {
     if (MODE === "http") await http("/session", { method: "DELETE" });
   },

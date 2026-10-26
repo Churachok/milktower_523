@@ -41,6 +41,8 @@ for (const path of files) {
 for (const path of [
   "README.md", "THIRD_PARTY_NOTICES", "compose.yaml", "compose.integration.yaml", "compose.gpu.yaml",
   "frontend/package-lock.json", "frontend/Dockerfile", "backend/README.md", "ml/README.md",
+  "backend/Dockerfile", "backend/uv.lock", "backend/app/main.py", "backend/tests/test_scoring.py",
+  "compose.demo.yaml", "compose.ai.yaml", "ml/Dockerfile.ai", "ml/requirements.lock", "scripts/integration-smoke.mjs",
   "frontend/vite.config.js", "frontend/src/services/scoring.js", "ml/Dockerfile",
   "ml/server.py", "ml/demo.py", "ml/tests/test_scoring.py", "docs/scoring-openapi.json",
   "docs/architecture.md", "docs/openapi.json", "docs/requests.http", "docs/test-scenarios.md",

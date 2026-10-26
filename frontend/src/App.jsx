@@ -93,11 +93,26 @@ export default function App() {
       setError("");
       return value;
     } catch (e) {
+      if (e.status === 401) {
+        setRole("login");
+        setApplications([]);
+      }
       setError(e.message);
       throw e;
     } finally {
       setLoading(false);
     }
+  }, []);
+  useEffect(() => {
+    if (api.mode !== "http") return;
+    let active = true;
+    api.session().then((session) => {
+      if (active && ["client", "employee"].includes(session?.role))
+        setRole(session.role);
+    }).catch((error) => {
+      if (active && error.status !== 401) setError(error.message);
+    });
+    return () => { active = false; };
   }, []);
   useEffect(() => {
     const hash = () => {

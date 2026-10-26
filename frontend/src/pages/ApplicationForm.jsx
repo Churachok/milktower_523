@@ -429,8 +429,11 @@ export default function ApplicationForm({
                   documents={form.documents}
                   onRemove={async (id) => {
                     try {
-                      const updated = await api.removeDocument(form.id, id);
-                      setForm((f) => ({ ...f, documents: updated.documents }));
+                      await api.removeDocument(form.id, id);
+                      setForm((f) => ({
+                        ...f,
+                        documents: f.documents.filter((d) => d.id !== id),
+                      }));
                     } catch (e) {
                       notify(e.message, "error");
                     }

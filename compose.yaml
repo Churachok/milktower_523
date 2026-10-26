@@ -4,6 +4,8 @@ services:
   frontend:
     image: milk-tower-frontend:integration
     build:
+      args:
+        BUILD_COMMIT: ${BUILD_COMMIT:-development}
       context: ./frontend
       target: integration
     ports:
@@ -34,6 +36,8 @@ services:
   ml:
     image: ${ML_IMAGE:-milk-tower-ml:local}
     build:
+      args:
+        BUILD_COMMIT: ${BUILD_COMMIT:-development}
       context: ./ml
     expose:
     - '8001'
@@ -82,6 +86,8 @@ services:
   backend:
     image: ${BACKEND_IMAGE:-milk-tower-backend:local}
     build:
+      args:
+        BUILD_COMMIT: ${BUILD_COMMIT:-development}
       context: ./backend
     expose:
     - '8000'
@@ -89,6 +95,8 @@ services:
       PORT: '8000'
       DATA_DIR: /data
       ML_BASE_URL: http://ml:8001
+      BUILD_COMMIT: ${BUILD_COMMIT:-development}
+      RELEASE_VERSION: "1.1.0"
     volumes:
     - backend-data:/data
     depends_on:
@@ -97,13 +105,9 @@ services:
     healthcheck:
       test:
       - CMD
-      - curl
-      - --fail
-      - --silent
-      - --show-error
-      - --max-time
-      - '2'
-      - http://127.0.0.1:8000/healthz
+      - python
+      - -c
+      - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)
       interval: 10s
       timeout: 3s
       start_period: 30s

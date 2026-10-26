@@ -1,6 +1,7 @@
 import React from "react";
 import { Badge, Button, Empty, Icon, PageHeading } from "../components/ui";
 import LoanCalculator from "../components/LoanCalculator";
+import { NewsFeed } from "./News";
 import { money, productOf } from "../domain/application";
 
 export default function Overview({ applications, navigate }) {
@@ -143,6 +144,7 @@ export default function Overview({ applications, navigate }) {
           />
         )}
       </section>
+      <NewsFeed applications={applications} navigate={navigate} compact />
     </>
   );
 }

@@ -2791,3 +2791,34 @@ select {
     align-items: stretch;
   }
 }
+
+/* Contextual guidance stays within the existing cabinet layout. */
+.news-section { margin-top: 30px; }
+.news-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.news-card { padding: 26px; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+.news-card h3 { margin: 0; font-size: 20px; line-height: 1.35; }
+.news-card p { margin: 0; line-height: 1.6; color: var(--text-muted, #667085); }
+.news-card .news-reason { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; color: #506b9b; }
+.news-reason svg { flex-shrink: 0; margin-top: 3px; }
+.news-card details { width: 100%; border-top: 1px solid #e9edf4; padding-top: 14px; }
+.news-card details summary { cursor: pointer; font-weight: 500; }
+.news-card details p { margin-top: 12px; font-size: 14px; }
+.news-card > .button, .news-card > .text-button { margin-top: auto; }
+.document-checklist { display: grid; gap: 12px; margin-bottom: 24px; }
+.document-checklist > div { display: flex; align-items: flex-start; gap: 12px; border: 1px solid #e4e9f1; border-radius: 12px; padding: 15px; }
+.document-checklist svg { flex-shrink: 0; color: #6b7b94; margin-top: 2px; }
+.document-checklist strong, .document-checklist small { display: block; }
+.document-checklist strong { font-size: 14px; }
+.document-checklist small { margin-top: 6px; line-height: 1.5; color: #667085; }
+.document-checklist .is-complete { border-color: #cde1d6; background: #f5faf7; }
+.document-checklist .is-complete svg { color: #3a7956; }
+.financial-preview { border: 1px solid #e4e9f1; border-radius: 12px; padding: 22px; margin-top: 24px; }
+.financial-preview h3 { font-size: 17px; }
+.budget-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 22px 0; }
+.budget-grid dt { font-size: 12px; line-height: 1.5; color: #667085; }
+.budget-grid dd { margin: 8px 0 0; font-size: 18px; font-weight: 600; }
+@media (max-width: 700px) {
+  .news-grid, .budget-grid { grid-template-columns: 1fr; }
+  .news-card { padding: 20px; }
+  .financial-preview { padding: 17px; }
+}

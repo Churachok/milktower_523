@@ -15,6 +15,7 @@ export function routeAfterLogin(route, role) {
       "/documents",
       "/profile",
       "/support",
+      "/news",
     ].includes(route)
     ? route
     : "/overview";

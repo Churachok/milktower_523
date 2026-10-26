@@ -5,7 +5,7 @@
 ## Полный продукт
 
 ```bash
-docker compose up --build -d --wait --wait-timeout 180
+./scripts/run.sh
 ```
 
 Адрес: [http://localhost:8080](http://localhost:8080). `compose.yaml` запускает все три компонента:
@@ -28,7 +28,7 @@ node scripts/smoke.mjs http://127.0.0.1:8080
 docker compose down
 ```
 
-Smoke проверяет SPA, статику, cache headers, Nginx API, сессии и права, загрузку двух PDF, настоящий скоринг, дозапрос, предложение и выдачу. Для него нужен Node.js 22.12+. Обычный `down` сохраняет SQLite в `backend-data`; `down -v` удаляет данные. Seed создаётся только в новой БД, миграции применяются при старте.
+Smoke проверяет SPA, статику, cache headers, локальный Swagger, совпадение commit frontend/backend, Nginx API, сессии и права, загрузку двух PDF, настоящий скоринг, дозапрос, предложение и выдачу. CI также перезапускает backend и сравнивает сохранённую заявку с исходным результатом. Для него нужен Node.js 22.12+. Обычный `down` сохраняет SQLite в `backend-data`; `down -v` удаляет данные. Seed создаётся только в новой БД, миграции применяются при старте.
 
 `compose.integration.yaml` оставлен для совместимости старой команды `-f compose.yaml -f compose.integration.yaml`: отдельного включения backend больше не требуется.
 
@@ -64,3 +64,9 @@ docker compose -f compose.yaml -f compose.gpu.yaml config --quiet
 ```
 
 Проверка конфигурации не подтверждает сборку или запуск. Фактические результаты — [verification.md](verification.md). При ошибке подключения к `/var/run/docker.sock` сначала требуется запустить Docker на хосте.
+
+## Версия и внешний сервер
+
+`./scripts/run.sh` передаёт полный hash из Git / SOURCE_COMMIT в Docker. Прямой Compose без BUILD_COMMIT помечает версию как development. Базовые образы Node, Nginx, Python и uv закреплены по digest; Swagger UI также включён локально по npm lock-файлу. Сам backend проверяется Python urllib, curl в образе не нужен.
+
+[HTTPS-конфигурация сервера](../deploy/README.md) находится в compose.server.yaml; по умолчанию не включена. [Подготовка сдаваемого архива](submission.md) сохраняет только исходники точного commit и контрольные суммы.

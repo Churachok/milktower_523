@@ -61,3 +61,14 @@ Groq — внешний провайдер, отдельные условия д
 ML Михаила Уляхина: правила 1.0.1, синтетические признаки и происхождение fixtures
 описаны в ml/README.md и ml/models/manifest.json. GPU Compose-файл не включает
 CUDA-runtime или модель и не используется текущими правилами.
+
+Swagger UI 5.34.0: Apache-2.0, https://github.com/swagger-api/swagger-ui
+Статические assets и LICENSE поставляются в frontend из npm lock-файла;
+интерфейс документации не использует CDN. @scarf/scarf 1.4.0 — build-time
+зависимость Swagger; аналитика установки отключена scarfSettings.enabled=false
+и SCARF_ANALYTICS=false, в runtime не включается.
+
+Caddy 2, опциональный HTTPS-шлюз: Apache-2.0, https://github.com/caddyserver/caddy
+Образ закреплён digest в compose.server.yaml. Основной запуск его не требует.
+Редакционные материалы персональной ленты написаны командой для учебного демо;
+новости, бренд-материалы и тексты других банков не копируются.

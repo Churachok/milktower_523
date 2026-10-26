@@ -723,6 +723,43 @@
           }
         }
       }
+    },
+    "/version": {
+      "get": {
+        "summary": "Identify the release and exact source commit",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Public synthetic build metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "version",
+                    "commit",
+                    "mode"
+                  ],
+                  "properties": {
+                    "version": {
+                      "type": "string"
+                    },
+                    "commit": {
+                      "type": "string"
+                    },
+                    "mode": {
+                      "const": "synthetic-demo"
+                    },
+                    "scoring": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

@@ -59,6 +59,67 @@ Application включает компанию, финансы, условия, �
 
 `compose.demo.yaml` — явное браузерное демо с localStorage и прямым `/ml-api`; основной запуск его не использует. `compose.ai.yaml` включает FastAPI-вариант ML с совместимым `/score` и опциональными Groq endpoints. Без ключа основной скоринг продолжает работать; вызов AI-помощника получает 503.
 
-Nginx и Vite сохраняют origin браузера при проксировании `/api`. HTTP-таймаут frontend — 15 секунд, ML-запрос backend — 5 секунд. Статусы обновляются при загрузке страницы, ручном обновлении и собственных действиях; push-обновлений между разными браузерами нет. Шрифты и графика локальные.
+Nginx и Vite сохраняют origin браузера при проксировании `/api`. HTTP-таймаут frontend — 15 секунд, ML-запрос backend — 5 секунд. Статусы обновляются при загрузке, собственных действиях, каждые 10 секунд в видимой вкладке и при возврате к ней. Это polling; streaming/SSE не используется. Новостная лента вычисляется локальными прозрачными правилами из отфильтрованных сервером заявок клиента; данные не отправляются в сторонние сервисы. Шрифты и графика локальные.
 
 [Docker](docker.md) · [Backend](../backend/README.md) · [ML](../ml/README.md) · [Проверки](verification.md).
+
+## Идентификатор сборки и эксплуатация
+
+`BUILD_COMMIT` передаётся в сборку всех образов и backend env. `/api/v1/version` и `/version.json` позволяют проверить исходную версию; OCI revision labels содержат тот же hash. `scripts/run.sh` берёт его из Git или `SOURCE_COMMIT` экспортированного архива. Базовые образы закреплены по digest, зависимости — lock-файлами.
+
+API отвечает `Cache-Control: no-store`, назначает `X-Request-ID`, проверяет Origin браузерных записей. Swagger находится на `/api/v1/docs`, его статические ресурсы поставляются frontend без CDN. Внешняя демонстрация использует Caddy HTTPS и отдельный пароль просмотра; детали в [deploy/README.md](../deploy/README.md).
+
+## Связи серверной модели данных
+
+```mermaid
+erDiagram
+  USERS ||--o{ SESSIONS : authenticates
+  USERS ||--o{ APPLICATIONS : owns
+  APPLICATIONS ||--o{ CHECKS : assessed_by
+  APPLICATIONS ||--o{ DECISIONS : reviewed_by
+  USERS ||--o{ DECISIONS : records
+  USERS ||--o{ AUDIT_LOG : acts
+  USERS {
+    int id PK
+    string login UK
+    string role
+  }
+  SESSIONS {
+    string id PK "token hash"
+    int user_id FK
+    string expires_at
+    string revoked_at
+  }
+  APPLICATIONS {
+    string id PK
+    int owner_user_id FK
+    string status
+    json company
+    json finances
+    json documents "metadata only"
+    json history
+    json scoring_result
+    json offer
+  }
+  CHECKS {
+    int id PK
+    string application_id FK
+    string kind
+    json details
+  }
+  DECISIONS {
+    int id PK
+    string application_id FK
+    int employee_id FK
+    string decision
+    string scoring_recommendation
+  }
+  AUDIT_LOG {
+    int id PK
+    int actor_user_id FK
+    string application_id "logical reference"
+    string from_status
+    string to_status
+    json details
+  }
+```

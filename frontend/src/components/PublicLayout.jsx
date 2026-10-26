@@ -57,7 +57,7 @@ export default function PublicLayout({ route, role, navigate, children }) {
         {children}
       </main>
       <footer className="public-footer">
-        <span>© 2026 Milk Tower</span>
+        <span>© 2026 Milk Tower · v1.1.0</span>
         <span>Демонстрационный прототип · Синтетические данные</span>
       </footer>
     </div>

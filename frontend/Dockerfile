@@ -1,9 +1,9 @@
-FROM node:22-alpine AS source
+FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS source
 
 WORKDIR /app
 
 # Bound the JavaScript heap during the build on an 8 GB computer.
-ENV NODE_OPTIONS=--max-old-space-size=1024
+ENV NODE_OPTIONS=--max-old-space-size=1024 SCARF_ANALYTICS=false
 
 COPY package.json package-lock.json ./
 RUN npm ci --include=dev --no-audit --no-fund
@@ -11,7 +11,10 @@ RUN npm ci --include=dev --no-audit --no-fund
 COPY index.html ./
 COPY vite.config.js ./
 COPY src ./src
+COPY scripts ./scripts
 COPY public ./public
+ARG BUILD_COMMIT=development
+ENV VITE_BUILD_COMMIT=$BUILD_COMMIT
 
 FROM source AS demo-build
 
@@ -26,8 +29,12 @@ ENV VITE_API_MODE=http \
     VITE_API_BASE_URL=/api/v1
 RUN npm run build
 
-FROM nginx:stable-alpine AS runtime
+FROM nginx:stable-alpine@sha256:47928bf67eb62a1863cb08d9ecb52d3e704304ba614eaee17884204677702951 AS runtime
 
+ARG BUILD_COMMIT=development
+LABEL org.opencontainers.image.source="https://github.com/Churachok/milktower_523" \
+      org.opencontainers.image.revision=$BUILD_COMMIT \
+      org.opencontainers.image.version="1.1.0"
 COPY nginx.conf /etc/nginx/nginx.conf
 
 USER nginx

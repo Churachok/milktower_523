@@ -21,11 +21,11 @@ for (const path of [
   "ml/.cache/model", "ml/.ipynb_checkpoints/experiment.ipynb", "backend/data/app.db",
   "backend/uploads/document.pdf", "ml/data/train.csv", "ml/checkpoints/model.pt",
   "ml/models/weights.safetensors", "secrets/private.pem", "tmp/preview.pdf",
-  "compose.override.yaml", "compose.debug.local.yaml",
+  "compose.override.yaml", "compose.debug.local.yaml", ".env.server", "frontend/public/api-docs/swagger-ui-bundle.js", "frontend/public/version.json",
 ]) assert.ok(ignored(path), `${path} must be excluded from Git`);
 
 for (const path of [
-  ".env.example", ".env.integration.example", "frontend/.env.example",
+  ".env.example", ".env.integration.example", ".env.server.example", "frontend/.env.example",
   "backend/Dockerfile", "backend/src/api.py", "backend/pyproject.toml", "backend/uv.lock",
   "backend/package-lock.json", "ml/Dockerfile", "ml/Dockerfile.gpu", "ml/src/inference.py",
   "ml/requirements.lock", "ml/models/model.py", "ml/models/layers/encoder.py",
@@ -43,6 +43,9 @@ for (const path of [
   "frontend/package-lock.json", "frontend/Dockerfile", "backend/README.md", "ml/README.md",
   "backend/Dockerfile", "backend/uv.lock", "backend/app/main.py", "backend/tests/test_scoring.py",
   "compose.demo.yaml", "compose.ai.yaml", "ml/Dockerfile.ai", "ml/requirements.lock", "scripts/integration-smoke.mjs",
+  "VERSION", "docs/requirements.md", "docs/case-source.json", "docs/product-research.md",
+  "scripts/run.sh", "scripts/package-release.mjs", "scripts/verify-package.mjs",
+  "compose.server.yaml", "deploy/Caddyfile", "deploy/README.md",
   "frontend/vite.config.js", "frontend/src/services/scoring.js", "ml/Dockerfile",
   "ml/server.py", "ml/demo.py", "ml/tests/test_scoring.py", "docs/scoring-openapi.json",
   "docs/architecture.md", "docs/openapi.json", "docs/requests.http", "docs/test-scenarios.md",

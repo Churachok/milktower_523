@@ -95,3 +95,7 @@ test-results/
 *~
 .DS_Store
 Thumbs.db
+
+# Generated local Swagger assets and build identity
+/frontend/public/api-docs/
+/frontend/public/version.json

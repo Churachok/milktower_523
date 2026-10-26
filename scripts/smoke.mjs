@@ -43,6 +43,19 @@ if (process.argv.includes("--demo")) {
   const health = await request("/ml-api/healthz");
   assert.equal((await health.json()).status, "ok");
 } else {
+  const version = await (await request("/api/v1/version")).json();
+  const frontendVersion = await (await request("/version.json")).json();
+  assert.equal(version.version, "1.1.0");
+  assert.equal(frontendVersion.commit, version.commit, "Frontend and backend must identify the same source");
+  if (process.env.BUILD_COMMIT) assert.equal(version.commit, process.env.BUILD_COMMIT);
+  const apiDocs = await request("/api/v1/docs");
+  const docsHtml = await apiDocs.text();
+  assert.match(docsHtml, /Swagger UI/);
+  assert.ok(!docsHtml.includes("cdn.jsdelivr.net"), "Swagger must work without a CDN");
+  await request("/api-docs/swagger-ui-bundle.js");
+  await request("/api-docs/swagger-ui.css");
+  const spec = await (await request("/api/v1/openapi.json")).json();
+  assert.ok(spec.paths["/api/v1/session"].post);
   await import("./integration-smoke.mjs");
 }
 console.log("HTTP smoke passed: SPA, assets, Nginx proxy and application API.");

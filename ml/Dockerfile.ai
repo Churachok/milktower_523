@@ -1,5 +1,9 @@
 # Optional external AI helpers; the default Dockerfile stays offline and stdlib-only.
-FROM python:3.12.12-slim
+FROM python:3.12.12-slim@sha256:f3fa41d74a768c2fce8016b98c191ae8c1bacd8f1152870a3f9f87d350920b7c
+ARG BUILD_COMMIT=development
+LABEL org.opencontainers.image.source="https://github.com/Churachok/milktower_523" \
+      org.opencontainers.image.revision=$BUILD_COMMIT \
+      org.opencontainers.image.version="1.1.0"
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 COPY requirements.lock ./

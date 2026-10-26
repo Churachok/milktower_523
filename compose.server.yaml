@@ -1,0 +1,33 @@
+# Optional HTTPS gateway for a dedicated demonstration server.
+services:
+  gateway:
+    image: caddy:2-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?Set the server domain in .env.server}
+      REVIEWER_PASSWORD_HASH: ${REVIEWER_PASSWORD_HASH:?Set a Caddy password hash in .env.server}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      frontend:
+        condition: service_healthy
+    restart: unless-stopped
+    cpus: 0.25
+    mem_limit: 128m
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+  backend:
+    environment:
+      COOKIE_SECURE: "true"
+      CORS_ORIGINS: https://${PUBLIC_HOST:?Set the server domain}
+volumes:
+  caddy-data:
+  caddy-config:

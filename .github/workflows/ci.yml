@@ -2,8 +2,10 @@ name: CI
 
 "on":
   push:
+    branches: ["**"]
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -13,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
+      SCARF_ANALYTICS: "false"
       NODE_OPTIONS: --max-old-space-size=1024
       VITE_API_MODE: http
       VITE_API_BASE_URL: /api/v1
@@ -25,6 +28,8 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - name: Identify the exact build
+        run: echo "BUILD_COMMIT=$GITHUB_SHA" >> "$GITHUB_ENV"
       - name: Check submission files and Git ignore policy
         run: node scripts/check-repository.mjs
       - name: Install dependencies
@@ -58,6 +63,7 @@ jobs:
         run: |
           docker compose config --quiet
           docker compose -f compose.demo.yaml config --quiet
+          PUBLIC_HOST=demo.example REVIEWER_PASSWORD_HASH=placeholder docker compose -f compose.yaml -f compose.server.yaml config --quiet
           docker compose -f compose.yaml -f compose.ai.yaml config --quiet
           docker compose -f compose.yaml -f compose.integration.yaml config --quiet
           docker compose -f compose.yaml -f compose.integration.yaml -f compose.gpu.yaml config --quiet
@@ -67,6 +73,11 @@ jobs:
         run: |
           docker compose exec -T frontend nginx -t
           node scripts/smoke.mjs
+      - name: Confirm persistence across container restart
+        run: |
+          docker compose restart backend
+          docker compose up -d --wait --wait-timeout 90
+          node scripts/integration-smoke.mjs http://127.0.0.1:8080 --verify-persisted
       - name: Show Docker logs on failure
         if: failure()
         run: docker compose logs --no-color --tail=100

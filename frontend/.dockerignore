@@ -13,3 +13,7 @@
 !src/**
 !public/
 !public/**
+!scripts/
+!scripts/**
+public/api-docs/
+public/version.json

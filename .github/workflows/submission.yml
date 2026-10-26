@@ -1,0 +1,35 @@
+name: Submission package
+"on":
+  push:
+    tags: ["submission-*"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+  package:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Export committed sources and checksums
+        run: node scripts/package-release.mjs .local/submission
+      - name: Verify packaged file manifest
+        run: |
+          mkdir /tmp/milk-tower-submission
+          tar -xzf .local/submission/milk-tower-*.tar.gz -C /tmp/milk-tower-submission
+          node scripts/verify-package.mjs /tmp/milk-tower-submission
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: milk-tower-submission-${{ github.sha }}
+          path: .local/submission/*
+          if-no-files-found: error
+          retention-days: 90

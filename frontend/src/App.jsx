@@ -19,6 +19,7 @@ import Support from "./pages/Support";
 import Home, { HowItWorks } from "./pages/Home";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
+import News from "./pages/News";
 import PublicLayout from "./components/PublicLayout";
 import {
   isPublicRoute,
@@ -56,6 +57,7 @@ export default function App() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [syncWarning, setSyncWarning] = useState("");
   const [toast, setToast] = useState(null);
   const [mobileNav, setMobileNav] = useState(false);
   const [panel, setPanel] = useState(null);
@@ -72,6 +74,7 @@ export default function App() {
   const [loggingOut, setLoggingOut] = useState(false);
   const toastTimer = useRef();
   const reviewedRoute = useRef(null);
+  const requestSequence = useRef(0);
   const notify = useCallback((text, type = "success") => {
     clearTimeout(toastTimer.current);
     setToast({ text, type });
@@ -84,23 +87,30 @@ export default function App() {
     setPanel(null);
     window.scrollTo({ top: 0 });
   }, []);
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (options = {}) => {
+    const sequence = ++requestSequence.current;
+    const background = options.background === true;
     try {
       const value = await api.list();
       if (!Array.isArray(value))
         throw new Error("Сервер вернул некорректный список заявок");
-      setApplications(value);
-      setError("");
+      if (sequence === requestSequence.current) {
+        setApplications(value);
+        setError("");
+        setSyncWarning("");
+      }
       return value;
     } catch (e) {
+      if (sequence !== requestSequence.current) throw e;
       if (e.status === 401) {
         setRole("login");
         setApplications([]);
       }
-      setError(e.message);
+      if (background) setSyncWarning("Не удалось обновить статусы. Показываем последние полученные данные.");
+      else setError(e.message);
       throw e;
     } finally {
-      setLoading(false);
+      if (sequence === requestSequence.current) setLoading(false);
     }
   }, []);
   useEffect(() => {
@@ -141,7 +151,18 @@ export default function App() {
     };
     window.addEventListener("potok-change", sync);
     window.addEventListener("storage", storage);
+    const backgroundSync = () => {
+      if (api.mode === "http" && document.visibilityState === "visible")
+        refresh({ background: true }).catch(() => {});
+    };
+    const timer = setInterval(backgroundSync, 10000);
+    window.addEventListener("focus", backgroundSync);
+    document.addEventListener("visibilitychange", backgroundSync);
     return () => {
+      ++requestSequence.current;
+      clearInterval(timer);
+      window.removeEventListener("focus", backgroundSync);
+      document.removeEventListener("visibilitychange", backgroundSync);
       window.removeEventListener("potok-change", sync);
       window.removeEventListener("storage", storage);
     };
@@ -271,6 +292,7 @@ export default function App() {
           badge: applications.length,
         },
         { path: "/documents", icon: "folder", name: "Документы" },
+        { path: "/news", icon: "file", name: "Для бизнеса" },
       ];
   const activeRoute = appId
     ? employee
@@ -319,6 +341,7 @@ export default function App() {
   else if (["/queue", "/overview"].includes(route) && employee)
     page = <Employee {...common} />;
   else if (route === "/overview") page = <Overview {...common} />;
+  else if (route === "/news" && !employee) page = <News {...common} />;
   else if (route === "/products" && !employee) page = <Products {...common} />;
   else if (route === "/applications")
     page = employee ? (
@@ -460,7 +483,7 @@ export default function App() {
           <span>
             {api.mode === "mock"
               ? "Демонстрационный кабинет"
-              : "Защищённое соединение"}
+              : "Серверное хранение"}
           </span>
         </div>
       </aside>
@@ -516,6 +539,7 @@ export default function App() {
           </div>
         </header>
         <main id="main-content" tabIndex={-1} className="main-content">
+          {syncWarning && <Notice tone="amber">{syncWarning}</Notice>}
           {getPersistenceWarning() && (
             <Notice tone="amber">{getPersistenceWarning()}</Notice>
           )}
@@ -548,11 +572,11 @@ export default function App() {
             page
           )}
           <footer className="page-footer">
-            <span>© 2026 Milk Tower</span>
+            <span>© 2026 Milk Tower · v1.1.0{import.meta.env?.VITE_BUILD_COMMIT && <> · <code title={import.meta.env.VITE_BUILD_COMMIT}>{import.meta.env.VITE_BUILD_COMMIT.slice(0, 8)}</code></>}</span>
             <span>
               {api.mode === "mock"
                 ? "Синтетические данные · Демо-режим"
-                : "Кредитный кабинет"}
+                : "Статусы обновляются автоматически"}
             </span>
           </footer>
         </main>

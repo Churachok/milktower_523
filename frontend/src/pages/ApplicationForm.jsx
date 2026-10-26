@@ -8,6 +8,8 @@ import {
   Empty,
 } from "../components/ui";
 import { DocumentList, UploadArea } from "./Documents";
+import FinancialPreview from "../components/FinancialPreview";
+import { REQUIRED_DOCUMENTS } from "../domain/readiness";
 import { api } from "../services/api";
 import {
   productOf,
@@ -398,10 +400,20 @@ export default function ApplicationForm({
                     { min: 1, max: 100 },
                   )}
                 </div>
+                <FinancialPreview application={form} />
               </>
             )}
             {step === 3 && (
               <>
+                <div className="document-checklist" aria-label="Обязательные документы" aria-live="polite">
+                  {REQUIRED_DOCUMENTS.map((document) => {
+                    const present = form.documents.some((d) => d.kind === document.kind);
+                    return <div key={document.kind} className={present ? "is-complete" : ""}>
+                      <Icon name={present ? "check" : "file"} size={19} />
+                      <span><strong>{document.title} · {present ? "Добавлено" : "Нужно добавить"}</strong><small>{document.help}</small></span>
+                    </div>;
+                  })}
+                </div>
                 <Field label="Тип документа">
                   <select
                     id="document-kind"

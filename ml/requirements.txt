@@ -1,2 +1,9 @@
-# Python 3.12.12 (Dockerfile). Scoring and the demo HTTP service use only stdlib.
-# No third-party Python packages or model downloads are required.
+# Optional FastAPI/Groq endpoints in main.py. The core server.py uses only stdlib.
+fastapi==0.111.0
+uvicorn==0.30.1
+pydantic>=2.8.0,<3
+groq==0.11.0
+httpx==0.27.2
+pypdf==5.1.0
+python-dotenv==1.0.1
+python-multipart==0.0.20
